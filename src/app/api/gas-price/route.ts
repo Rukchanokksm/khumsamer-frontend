@@ -10,15 +10,25 @@ const BASE_PRICES: Record<string, number> = {
   "Shell FuelSave Diesel": 29.99,
 };
 
-// Small deterministic daily variation (±0.5 THB) based on date seed
+// Hash ทั้ง string เพื่อให้ fuel แต่ละชนิดมี seed ต่างกัน
+// (ก่อนหน้านี้ใช้ charCodeAt(0) ซึ่งชื่อ Shell ทุกชนิดขึ้นต้นด้วย "S" เลยได้ค่าเท่ากันหมด)
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+// Small deterministic daily variation (±0.50 THB) based on date + fuel seed
 function getDailyVariation(fuelType: string, date: Date): number {
   const seed =
     date.getFullYear() * 10000 +
     (date.getMonth() + 1) * 100 +
     date.getDate() +
-    fuelType.charCodeAt(0);
-  const pseudo = Math.sin(seed) * 0.5;
-  return Math.round(pseudo * 20) / 100; // ±0.20 THB
+    hashString(fuelType);
+  const pseudo = Math.sin(seed);
+  return Math.round(pseudo * 50) / 100; // ±0.50 THB
 }
 
 export async function GET() {

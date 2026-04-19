@@ -13,10 +13,14 @@ function formatTHB(amount: number): string {
 }
 
 const FUEL_COLORS: Record<string, string> = {
-  "Shell V-Power Nitro+ 95": "bg-red-50 border-red-200 text-red-700",
-  "Shell FuelSave 91": "bg-yellow-50 border-yellow-200 text-yellow-700",
-  "Shell V-Power Diesel": "bg-blue-50 border-blue-200 text-blue-700",
-  "Shell FuelSave Diesel": "bg-green-50 border-green-200 text-green-700",
+  "Shell V-Power Nitro+ 95":
+    "bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300",
+  "Shell FuelSave 91":
+    "bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-500/10 dark:border-yellow-500/30 dark:text-yellow-300",
+  "Shell V-Power Diesel":
+    "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300",
+  "Shell FuelSave Diesel":
+    "bg-green-50 border-green-200 text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300",
 };
 
 export function GasPriceWidget() {
@@ -24,9 +28,9 @@ export function GasPriceWidget() {
 
   if (isLoading) {
     return (
-      <Card className="border-orange-200">
+      <Card className="border-orange-200 dark:border-orange-500/30">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-orange-600">
+          <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
             <Fuel className="h-5 w-5" />
             ราคาน้ำมัน Shell วันนี้
           </CardTitle>
@@ -47,9 +51,9 @@ export function GasPriceWidget() {
 
   if (isError || !data) {
     return (
-      <Card className="border-red-200">
+      <Card className="border-red-200 dark:border-red-500/30">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-red-600">
+          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
             <Fuel className="h-5 w-5" />
             ราคาน้ำมัน Shell
           </CardTitle>
@@ -70,10 +74,10 @@ export function GasPriceWidget() {
   }
 
   return (
-    <Card className="border-orange-200">
+    <Card className="border-orange-200 dark:border-orange-500/30">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-orange-600">
+          <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
             <Fuel className="h-5 w-5" />
             ราคาน้ำมัน Shell วันนี้
           </CardTitle>
@@ -99,7 +103,7 @@ export function GasPriceWidget() {
               key={price.fuelType}
               className={`rounded-lg border p-3 ${
                 FUEL_COLORS[price.fuelType] ??
-                "bg-gray-50 border-gray-200 text-gray-700"
+                "bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-500/10 dark:border-gray-500/30 dark:text-gray-300"
               }`}
             >
               <p className="text-xs font-medium leading-tight mb-1">
@@ -112,15 +116,15 @@ export function GasPriceWidget() {
               <div className="flex items-center gap-0.5">
                 {price.change > 0 ? (
                   <>
-                    <TrendingUp className="h-3 w-3 text-red-500" />
-                    <span className="text-[10px] text-red-500">
+                    <TrendingUp className="h-3 w-3 text-red-500 dark:text-red-400" />
+                    <span className="text-[10px] text-red-500 dark:text-red-400">
                       +{formatTHB(price.change)}
                     </span>
                   </>
                 ) : price.change < 0 ? (
                   <>
-                    <TrendingDown className="h-3 w-3 text-green-500" />
-                    <span className="text-[10px] text-green-500">
+                    <TrendingDown className="h-3 w-3 text-green-500 dark:text-green-400" />
+                    <span className="text-[10px] text-green-500 dark:text-green-400">
                       {formatTHB(price.change)}
                     </span>
                   </>

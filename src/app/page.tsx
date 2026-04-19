@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Car, CreditCard, Map, Settings } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
   {
@@ -7,28 +8,28 @@ const features = [
     title: "Road Trip",
     description: "วางแผนและบันทึกการเดินทางของครอบครัว",
     href: "/road-trip",
-    color: "bg-blue-50 text-blue-600",
+    color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
   },
   {
     icon: CreditCard,
     title: "Bill Payment",
     description: "ติดตามและจัดการการชำระค่าใช้จ่ายต่างๆ",
     href: "/bills",
-    color: "bg-green-50 text-green-600",
+    color: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400",
   },
   {
     icon: Car,
     title: "Car Service",
     description: "บันทึกประวัติการบำรุงรักษารถยนต์",
     href: "/car-service",
-    color: "bg-orange-50 text-orange-600",
+    color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
   },
   {
     icon: Settings,
     title: "อื่นๆ",
     description: "ข้อมูลอื่นๆ ของครอบครัว",
     href: "/others",
-    color: "bg-purple-50 text-purple-600",
+    color: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
   },
 ];
 
@@ -36,6 +37,9 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
+        <div className="flex justify-end mb-4">
+          <ThemeToggle />
+        </div>
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-3">
             Family Hub

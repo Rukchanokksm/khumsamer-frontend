@@ -2,11 +2,12 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, Receipt, MapPin, Fuel } from "lucide-react";
+import { Wrench, Receipt, MapPin } from "lucide-react";
 import { GasPriceWidget } from "@/components/car-service/GasPriceWidget";
 import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/ExpenseForm";
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function CarServicePage() {
   const carExpenses = useCarExpenses();
@@ -15,9 +16,12 @@ export default function CarServicePage() {
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Car Service</h1>
-        <p className="text-muted-foreground mt-1">ประวัติการบำรุงรักษาและค่าใช้จ่ายรถยนต์</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Car Service</h1>
+          <p className="text-muted-foreground mt-1">ประวัติการบำรุงรักษาและค่าใช้จ่ายรถยนต์</p>
+        </div>
+        <ThemeToggle />
       </div>
 
       {/* Gas Price Widget */}
