@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Car, CreditCard, Map, Settings } from "lucide-react";
+import { Car, CreditCard, LogIn, Map, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
 
 const features = [
   {
@@ -37,7 +38,13 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-2 mb-4">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/login">
+              <LogIn className="h-4 w-4" />
+              เข้าสู่ระบบ
+            </Link>
+          </Button>
           <ThemeToggle />
         </div>
         <div className="text-center mb-12">

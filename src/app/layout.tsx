@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import pkg from "../../package.json";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -39,6 +40,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>
+          <div className="fixed bottom-3 left-4 text-xs text-muted-foreground/40 select-none pointer-events-none">
+            v{pkg.version}
+          </div>
         </ThemeProvider>
       </body>
     </html>

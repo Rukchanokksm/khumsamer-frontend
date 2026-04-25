@@ -8,6 +8,7 @@ import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/Expe
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BackButton } from "@/components/back-button";
 
 export default function CarServicePage() {
   const carExpenses = useCarExpenses();
@@ -18,7 +19,8 @@ export default function CarServicePage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Car Service</h1>
+          <BackButton />
+          <h1 className="text-3xl font-bold mt-2">Car Service</h1>
           <p className="text-muted-foreground mt-1">ประวัติการบำรุงรักษาและค่าใช้จ่ายรถยนต์</p>
         </div>
         <ThemeToggle />

@@ -1,61 +1,116 @@
-"use client"
+"use client";
 
-import { useState, useCallback } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiJson } from "@/lib/api";
 import type {
-    CarExpense,
-    TravelExpense,
-    CreateCarExpenseInput,
-    CreateTravelExpenseInput,
-} from "@/types/car-service"
+  CarExpense,
+  TravelExpense,
+  CreateCarExpenseInput,
+  CreateTravelExpenseInput,
+} from "@/types/car-service";
 
-function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+const CAR_KEY = ["car-expenses"] as const;
+const TRAVEL_KEY = ["travel-expenses"] as const;
+
+async function fetchCarExpenses(): Promise<CarExpense[]> {
+  const data = await apiJson<{ expenses: CarExpense[] }>("/api/car-expenses");
+  return data.expenses;
 }
 
-const now = () => new Date().toISOString()
+async function createCarExpense(
+  input: CreateCarExpenseInput,
+): Promise<CarExpense> {
+  const data = await apiJson<{ expense: CarExpense }>("/api/car-expenses", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return data.expense;
+}
+
+async function deleteCarExpense(id: string): Promise<void> {
+  await apiJson(`/api/car-expenses/${id}`, { method: "DELETE" });
+}
+
+async function fetchTravelExpenses(): Promise<TravelExpense[]> {
+  const data = await apiJson<{ expenses: TravelExpense[] }>(
+    "/api/travel-expenses",
+  );
+  return data.expenses;
+}
+
+async function createTravelExpense(
+  input: CreateTravelExpenseInput,
+): Promise<TravelExpense> {
+  const data = await apiJson<{ expense: TravelExpense }>(
+    "/api/travel-expenses",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return data.expense;
+}
+
+async function deleteTravelExpense(id: string): Promise<void> {
+  await apiJson(`/api/travel-expenses/${id}`, { method: "DELETE" });
+}
 
 export function useCarExpenses() {
-    const [expenses, setExpenses] = useState<CarExpense[]>([])
+  const qc = useQueryClient();
 
-    const addExpense = useCallback((input: CreateCarExpenseInput) => {
-        const expense: CarExpense = {
-            ...input,
-            id: generateId(),
-            createdAt: now(),
-            updatedAt: now(),
-        }
-        setExpenses((prev) => [expense, ...prev])
-        return expense
-    }, [])
+  const query = useQuery({
+    queryKey: CAR_KEY,
+    queryFn: fetchCarExpenses,
+  });
 
-    const removeExpense = useCallback((id: string) => {
-        setExpenses((prev) => prev.filter((e) => e.id !== id))
-    }, [])
+  const createMutation = useMutation({
+    mutationFn: createCarExpense,
+    onSuccess: () => qc.invalidateQueries({ queryKey: CAR_KEY }),
+  });
 
-    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const deleteMutation = useMutation({
+    mutationFn: deleteCarExpense,
+    onSuccess: () => qc.invalidateQueries({ queryKey: CAR_KEY }),
+  });
 
-    return { expenses, addExpense, removeExpense, totalAmount }
+  const expenses = query.data ?? [];
+  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  return {
+    expenses,
+    totalAmount,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    addExpense: (input: CreateCarExpenseInput) => createMutation.mutate(input),
+    removeExpense: (id: string) => deleteMutation.mutate(id),
+  };
 }
 
 export function useTravelExpenses() {
-    const [expenses, setExpenses] = useState<TravelExpense[]>([])
+  const qc = useQueryClient();
 
-    const addExpense = useCallback((input: CreateTravelExpenseInput) => {
-        const expense: TravelExpense = {
-            ...input,
-            id: generateId(),
-            createdAt: now(),
-            updatedAt: now(),
-        }
-        setExpenses((prev) => [expense, ...prev])
-        return expense
-    }, [])
+  const query = useQuery({
+    queryKey: TRAVEL_KEY,
+    queryFn: fetchTravelExpenses,
+  });
 
-    const removeExpense = useCallback((id: string) => {
-        setExpenses((prev) => prev.filter((e) => e.id !== id))
-    }, [])
+  const createMutation = useMutation({
+    mutationFn: createTravelExpense,
+    onSuccess: () => qc.invalidateQueries({ queryKey: TRAVEL_KEY }),
+  });
 
-    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const deleteMutation = useMutation({
+    mutationFn: deleteTravelExpense,
+    onSuccess: () => qc.invalidateQueries({ queryKey: TRAVEL_KEY }),
+  });
 
-    return { expenses, addExpense, removeExpense, totalAmount }
+  const expenses = query.data ?? [];
+  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  return {
+    expenses,
+    totalAmount,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    addExpense: (input: CreateTravelExpenseInput) =>
+      createMutation.mutate(input),
+    removeExpense: (id: string) => deleteMutation.mutate(id),
+  };
 }

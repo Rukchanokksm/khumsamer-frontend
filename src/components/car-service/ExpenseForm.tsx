@@ -108,7 +108,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                         <div className="space-y-1">
                             <Label>ชื่อรถ *</Label>
                             <Input
-                                placeholder="เช่น Honda City"
+                                placeholder="เช่น Subaru Forester"
                                 value={form.carName ?? ""}
                                 onChange={(e) => set("carName", e.target.value)}
                                 required
@@ -352,7 +352,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                         <div className="space-y-1">
                             <Label>ชื่อรถ *</Label>
                             <Input
-                                placeholder="เช่น Honda City"
+                                placeholder="เช่น Subaru Forester"
                                 value={form.carName ?? ""}
                                 onChange={(e) => set("carName", e.target.value)}
                                 required
