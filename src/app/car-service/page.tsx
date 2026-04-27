@@ -1,18 +1,26 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, Receipt, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Wrench, Receipt, MapPin, Car, ChevronRight, Plus } from "lucide-react";
 import { GasPriceWidget } from "@/components/car-service/GasPriceWidget";
 import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/ExpenseForm";
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
+import { VehicleSelector } from "@/components/car-service/VehicleSelector";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
+import { useVehicles } from "@/hooks/useVehicles";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BackButton } from "@/components/back-button";
 
 export default function CarServicePage() {
   const carExpenses = useCarExpenses();
   const travelExpenses = useTravelExpenses();
+  const { vehicles } = useVehicles();
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
@@ -50,7 +58,7 @@ export default function CarServicePage() {
         </TabsList>
 
         {/* ---- Car Service History ---- */}
-        <TabsContent value="service" className="mt-4">
+        <TabsContent value="service" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -58,14 +66,65 @@ export default function CarServicePage() {
                   <Wrench className="h-5 w-5 text-orange-500" />
                   ประวัติการซ่อมบำรุง
                 </CardTitle>
+                <Link href="/vehicles/new">
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <Plus className="h-4 w-4" /> เพิ่มรถ
+                  </Button>
+                </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Wrench className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                <p>ยังไม่มีประวัติการซ่อมบำรุง</p>
-                <p className="text-sm mt-1">ฟีเจอร์นี้จะเปิดให้ใช้เร็วๆ นี้</p>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <Label className="text-sm">เลือกรถที่ต้องการดูประวัติ</Label>
+                <VehicleSelector
+                  value={selectedVehicleId}
+                  onChange={(id) => setSelectedVehicleId(id)}
+                />
               </div>
+
+              {selectedVehicleId ? (() => {
+                const v = vehicles.find((v) => v.id === selectedVehicleId);
+                return v ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/40">
+                      <div className="flex items-center gap-3">
+                        <Car className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium text-sm">{v.brand} {v.model}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{v.licensePlate}</p>
+                        </div>
+                      </div>
+                      <Link href={`/vehicles/${v.id}`}>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">
+                          ดูข้อมูลรถ <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Wrench className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">ยังไม่มีประวัติซ่อมบำรุงสำหรับรถคันนี้</p>
+                      <p className="text-xs mt-1">ฟีเจอร์บันทึกการซ่อมบำรุงจะเปิดให้ใช้เร็วๆ นี้</p>
+                    </div>
+                  </div>
+                ) : null;
+              })() : (
+                vehicles.length > 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Car className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">เลือกรถเพื่อดูประวัติการซ่อมบำรุง</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground space-y-3">
+                    <Car className="h-8 w-8 mx-auto opacity-30" />
+                    <p className="text-sm">เพิ่มข้อมูลรถก่อนเพื่อเริ่มบันทึกประวัติซ่อมบำรุง</p>
+                    <Link href="/vehicles/new">
+                      <Button size="sm" className="gap-1">
+                        <Plus className="h-4 w-4" /> เพิ่มรถ
+                      </Button>
+                    </Link>
+                  </div>
+                )
+              )}
             </CardContent>
           </Card>
         </TabsContent>

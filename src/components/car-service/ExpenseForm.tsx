@@ -26,6 +26,7 @@ import type {
     ExpenseCategory,
     TravelExpenseCategory,
 } from "@/types/car-service"
+import { VehicleSelector } from "@/components/car-service/VehicleSelector"
 
 // ---- Car Expense Form ----
 const CAR_EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
@@ -45,6 +46,7 @@ interface CarExpenseFormProps {
 
 export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
     const [open, setOpen] = useState(false)
+    const [selectedVehicleId, setSelectedVehicleId] = useState("")
     const [form, setForm] = useState<Partial<CreateCarExpenseInput>>({
         date: new Date().toISOString().split("T")[0],
         category: "fuel",
@@ -84,6 +86,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
         })
 
         setOpen(false)
+        setSelectedVehicleId("")
         setForm({
             date: new Date().toISOString().split("T")[0],
             category: "fuel",
@@ -104,6 +107,18 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                     <DialogTitle>บันทึกค่าใช้จ่ายรถ</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                    <div className="space-y-1">
+                        <Label>เลือกรถ</Label>
+                        <VehicleSelector
+                            value={selectedVehicleId}
+                            onChange={(id, carName, licensePlate) => {
+                                setSelectedVehicleId(id)
+                                set("carName", carName)
+                                set("licensePlate", licensePlate)
+                            }}
+                        />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                             <Label>ชื่อรถ *</Label>
@@ -276,6 +291,7 @@ interface TravelExpenseFormProps {
 
 export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
     const [open, setOpen] = useState(false)
+    const [selectedVehicleId, setSelectedVehicleId] = useState("")
     const [form, setForm] = useState<Partial<CreateTravelExpenseInput>>({
         date: new Date().toISOString().split("T")[0],
         category: "fuel",
@@ -318,6 +334,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
         })
 
         setOpen(false)
+        setSelectedVehicleId("")
         setForm({
             date: new Date().toISOString().split("T")[0],
             category: "fuel",
@@ -345,6 +362,18 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                             value={form.tripName ?? ""}
                             onChange={(e) => set("tripName", e.target.value)}
                             required
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <Label>เลือกรถ</Label>
+                        <VehicleSelector
+                            value={selectedVehicleId}
+                            onChange={(id, carName, licensePlate) => {
+                                setSelectedVehicleId(id)
+                                set("carName", carName)
+                                set("licensePlate", licensePlate)
+                            }}
                         />
                     </div>
 

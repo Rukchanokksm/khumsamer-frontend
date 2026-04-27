@@ -1,5 +1,5 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// ใช้ "" (same-origin) เพื่อให้ Next.js proxy ผ่าน rewrites ใน next.config.ts
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export function apiUrl(path: string): string {
   return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;

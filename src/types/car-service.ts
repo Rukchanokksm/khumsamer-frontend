@@ -82,6 +82,26 @@ export interface TravelExpense {
 export type CreateCarExpenseInput = Omit<CarExpense, "id" | "createdAt" | "updatedAt">;
 export type CreateTravelExpenseInput = Omit<TravelExpense, "id" | "createdAt" | "updatedAt">;
 
+// ---- Vehicles ----
+export type VehicleType = "sedan" | "pickup" | "ppv" | "suv" | "hatchback" | "other";
+export type VehicleCondition = "new" | "used";
+
+export interface Vehicle {
+  id: string;
+  brand: string;
+  model: string;
+  licensePlate: string;
+  type?: VehicleType;
+  color?: string;
+  condition?: VehicleCondition;
+  purchaseDate?: number; // Unix timestamp (seconds)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateVehicleInput = Omit<Vehicle, "id" | "createdAt" | "updatedAt">;
+export type UpdateVehicleInput = Partial<CreateVehicleInput>;
+
 // ---- Gas Price ----
 export interface FuelPrice {
   fuelType: string;
