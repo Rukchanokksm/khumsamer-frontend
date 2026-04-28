@@ -20,6 +20,8 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { ArrowLeft, Car } from "lucide-react";
 import type { CreateVehicleInput, VehicleType, VehicleCondition } from "@/types/car-service";
 
+const BRANDS = ["SUBARU", "TOYOTA", "HONDA", "MITSUBISHI", "FORD"] as const;
+
 const VEHICLE_TYPES: { value: VehicleType; label: string }[] = [
   { value: "sedan", label: "เก๋ง" },
   { value: "pickup", label: "กระบะ" },
@@ -111,12 +113,21 @@ export default function NewVehiclePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>ยี่ห้อ *</Label>
-                <Input
-                  placeholder="เช่น Toyota"
+                <Select
                   value={form.brand}
-                  onChange={(e) => patch("brand", e.target.value)}
-                  required
-                />
+                  onValueChange={(v) => patch("brand", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกยี่ห้อ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRANDS.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label>รุ่น *</Label>

@@ -64,15 +64,39 @@ async function callSignOut() {
   });
 }
 
+const LOGIN_TIME_KEY = "family-hub-login-time";
+
+function saveLoginTime(date: Date) {
+  try { localStorage.setItem(LOGIN_TIME_KEY, date.toISOString()); } catch {}
+}
+function readLoginTime(): Date | null {
+  try {
+    const v = localStorage.getItem(LOGIN_TIME_KEY);
+    return v ? new Date(v) : null;
+  } catch { return null; }
+}
+function clearLoginTime() {
+  try { localStorage.removeItem(LOGIN_TIME_KEY); } catch {}
+}
+
 export function useAuth() {
   const [currentUser, setCurrentUser] = useState<PublicUser | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [loginTime, setLoginTime] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetchSession()
       .then((user) => {
-        if (!cancelled) setCurrentUser(user);
+        if (!cancelled) {
+          setCurrentUser(user);
+          if (user) {
+            const stored = readLoginTime();
+            const t = stored ?? new Date();
+            if (!stored) saveLoginTime(t);
+            setLoginTime(t);
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setIsReady(true);
@@ -106,6 +130,9 @@ export function useAuth() {
     await callCredentialsSignIn(email, password);
     const user = await fetchSession();
     if (!user) throw new Error("สมัครสำเร็จแต่เข้าสู่ระบบไม่ได้ กรุณาลองใหม่");
+    const t = new Date();
+    saveLoginTime(t);
+    setLoginTime(t);
     setCurrentUser(user);
     return user;
   }, []);
@@ -120,14 +147,31 @@ export function useAuth() {
     await callCredentialsSignIn(email, password);
     const user = await fetchSession();
     if (!user) throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+    const t = new Date();
+    saveLoginTime(t);
+    setLoginTime(t);
     setCurrentUser(user);
     return user;
   }, []);
 
   const logout = useCallback(async () => {
     await callSignOut().catch(() => {});
+    clearLoginTime();
+    setLoginTime(null);
     setCurrentUser(null);
   }, []);
 
-  return { currentUser, isReady, signup, login, logout };
+  const updateName = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("กรุณากรอกชื่อ");
+    const res = await apiFetch("/api/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (!res.ok) throw new Error("แก้ไขชื่อไม่สำเร็จ");
+    const data = (await res.json()) as { user: { name: string } };
+    setCurrentUser((prev) => (prev ? { ...prev, name: data.user.name } : prev));
+  }, []);
+
+  return { currentUser, isReady, loginTime, signup, login, logout, updateName };
 }
