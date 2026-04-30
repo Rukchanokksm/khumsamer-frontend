@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useVehicles } from "@/hooks/useVehicles";
-import { Car, Plus, ChevronRight, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Car, Plus, ChevronRight } from "lucide-react";
 import type { VehicleType, VehicleCondition } from "@/types/car-service";
 
 const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
@@ -46,8 +47,19 @@ export default function VehiclesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/3" />
+                <div className="flex gap-1.5 pt-1">
+                  <Skeleton className="h-5 w-14" />
+                  <Skeleton className="h-5 w-14" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : vehicles.length === 0 ? (
         <div className="text-center py-20 space-y-4">

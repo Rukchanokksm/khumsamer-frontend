@@ -1,0 +1,243 @@
+"use client";
+
+import { useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Droplets, Zap, Home, UtensilsCrossed, Car,
+  ShoppingCart, Wifi, Smartphone, Shield, Receipt,
+  CheckCircle2, Upload, Trash2, ExternalLink, X, Loader2,
+} from "lucide-react";
+import type { Bill, BillCategory, BillStatus } from "@/types/bill";
+
+const CATEGORY_ICONS: Record<BillCategory, React.ElementType> = {
+  water: Droplets,
+  electricity: Zap,
+  rent: Home,
+  food: UtensilsCrossed,
+  car_installment: Car,
+  item_installment: ShoppingCart,
+  internet: Wifi,
+  mobile: Smartphone,
+  insurance: Shield,
+  other: Receipt,
+};
+
+const CATEGORY_LABELS: Record<BillCategory, string> = {
+  water: "ค่าน้ำ",
+  electricity: "ค่าไฟ",
+  rent: "ค่าที่พัก",
+  food: "ค่ากิน",
+  car_installment: "ผ่อนรถ",
+  item_installment: "ผ่อนของ",
+  internet: "อินเตอร์เน็ต",
+  mobile: "ค่ามือถือ",
+  insurance: "ค่าประกัน",
+  other: "อื่นๆ",
+};
+
+const ICON_COLORS: Record<BillCategory, string> = {
+  water: "text-blue-500",
+  electricity: "text-yellow-500",
+  rent: "text-purple-500",
+  food: "text-green-500",
+  car_installment: "text-orange-500",
+  item_installment: "text-pink-500",
+  internet: "text-cyan-500",
+  mobile: "text-indigo-500",
+  insurance: "text-emerald-500",
+  other: "text-gray-500",
+};
+
+const STATUS_STYLES: Record<BillStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300",
+  paid: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300",
+  overdue: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+};
+
+const STATUS_LABELS: Record<BillStatus, string> = {
+  pending: "ยังไม่จ่าย",
+  paid: "จ่ายแล้ว",
+  overdue: "เกินกำหนด",
+};
+
+function formatTHB(amount: number) {
+  return amount.toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+interface BillCardProps {
+  bill: Bill;
+  onMarkPaid: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUploadReceipt: (id: string, file: File) => void;
+  onRemoveReceipt: (id: string) => void;
+  isUploading?: boolean;
+  isUpdating?: boolean;
+}
+
+export function BillCard({
+  bill,
+  onMarkPaid,
+  onRemove,
+  onUploadReceipt,
+  onRemoveReceipt,
+  isUploading,
+  isUpdating,
+}: BillCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const Icon = CATEGORY_ICONS[bill.category];
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUploadReceipt(bill.id, file);
+      e.target.value = "";
+    }
+  }
+
+  const cardBorder =
+    bill.status === "overdue"
+      ? "border-red-200 dark:border-red-500/30"
+      : bill.status === "paid"
+      ? "border-green-200 dark:border-green-500/20"
+      : "";
+
+  return (
+    <Card className={cardBorder}>
+      <CardContent className="p-4 space-y-3">
+        {/* Top row: icon + name + amount */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`mt-0.5 shrink-0 ${ICON_COLORS[bill.category]}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm leading-snug truncate">
+                {bill.name}
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                  {CATEGORY_LABELS[bill.category]}
+                </Badge>
+                {bill.isInstallment && bill.installmentNo && bill.totalInstallments && (
+                  <Badge variant="outline" className="text-xs px-1.5 py-0">
+                    งวด {bill.installmentNo}/{bill.totalInstallments}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-bold text-base">฿{formatTHB(bill.amount)}</p>
+            <Badge variant="secondary" className={`text-xs mt-1 ${STATUS_STYLES[bill.status]}`}>
+              {STATUS_LABELS[bill.status]}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Date row */}
+        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
+          <span>ครบกำหนด: {formatDate(bill.dueDate)}</span>
+          {bill.paidDate && (
+            <span className="text-green-600 dark:text-green-400">
+              จ่ายเมื่อ: {formatDate(bill.paidDate)}
+            </span>
+          )}
+        </div>
+
+        {/* Notes */}
+        {bill.notes && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{bill.notes}</p>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/60">
+          {bill.status !== "paid" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950"
+              onClick={() => onMarkPaid(bill.id)}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3 w-3" />
+              )}
+              จ่ายแล้ว
+            </Button>
+          )}
+
+          {bill.receiptUrl ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                asChild
+              >
+                <a href={bill.receiptUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3 w-3" /> ดูใบเสร็จ
+                </a>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => onRemoveReceipt(bill.id)}
+              >
+                <X className="h-3 w-3" /> ลบใบเสร็จ
+              </Button>
+            </>
+          ) : (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Upload className="h-3 w-3" />
+                )}
+                อัพโหลดใบเสร็จ
+              </Button>
+            </>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 ml-auto text-muted-foreground hover:text-destructive"
+            onClick={() => onRemove(bill.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

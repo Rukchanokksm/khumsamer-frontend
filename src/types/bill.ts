@@ -1,12 +1,16 @@
-export type BillStatus = "pending" | "paid" | "overdue";
 export type BillCategory =
-  | "electricity"
   | "water"
-  | "internet"
-  | "phone"
-  | "insurance"
+  | "electricity"
   | "rent"
+  | "food"
+  | "car_installment"
+  | "item_installment"
+  | "internet"
+  | "mobile"
+  | "insurance"
   | "other";
+
+export type BillStatus = "pending" | "paid" | "overdue";
 
 export interface Bill {
   id: string;
@@ -14,12 +18,38 @@ export interface Bill {
   category: BillCategory;
   amount: number;
   dueDate: string;
-  status: BillStatus;
   paidDate?: string;
+  status: BillStatus;
+  isInstallment: boolean;
+  installmentNo?: number;
+  totalInstallments?: number;
   notes?: string;
+  receiptUrl?: string;
+  receiptPath?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type CreateBillInput = Omit<Bill, "id" | "createdAt" | "updatedAt">;
-export type UpdateBillInput = Partial<CreateBillInput>;
+export interface CreateBillInput {
+  name: string;
+  category: BillCategory;
+  amount: number;
+  dueDate: string;
+  isInstallment?: boolean;
+  installmentNo?: number;
+  totalInstallments?: number;
+  notes?: string;
+}
+
+export interface UpdateBillInput {
+  name?: string;
+  category?: BillCategory;
+  amount?: number;
+  dueDate?: string;
+  status?: "pending" | "paid";
+  paidDate?: string | null;
+  isInstallment?: boolean;
+  installmentNo?: number | null;
+  totalInstallments?: number | null;
+  notes?: string | null;
+}

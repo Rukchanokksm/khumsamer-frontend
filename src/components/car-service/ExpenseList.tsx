@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
     Table,
     TableBody,
@@ -12,6 +13,35 @@ import {
 } from "@/components/ui/table"
 import { Trash2 } from "lucide-react"
 import type { CarExpense, TravelExpense } from "@/types/car-service"
+
+function TableSkeleton({ cols, rows = 4 }: { cols: number; rows?: number }) {
+    return (
+        <div className="rounded-md border overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        {Array.from({ length: cols }).map((_, i) => (
+                            <TableHead key={i}>
+                                <Skeleton className="h-4 w-16" />
+                            </TableHead>
+                        ))}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {Array.from({ length: rows }).map((_, i) => (
+                        <TableRow key={i}>
+                            {Array.from({ length: cols }).map((_, j) => (
+                                <TableCell key={j}>
+                                    <Skeleton className="h-4 w-full" />
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    )
+}
 
 function formatTHB(amount: number): string {
     return amount.toLocaleString("th-TH", {
@@ -71,13 +101,19 @@ interface CarExpenseListProps {
     expenses: CarExpense[]
     totalAmount: number
     onRemove: (id: string) => void
+    isLoading?: boolean
 }
 
 export function CarExpenseList({
     expenses,
     totalAmount,
     onRemove,
+    isLoading,
 }: CarExpenseListProps) {
+    if (isLoading) {
+        return <TableSkeleton cols={7} />
+    }
+
     if (expenses.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
@@ -179,13 +215,19 @@ interface TravelExpenseListProps {
     expenses: TravelExpense[]
     totalAmount: number
     onRemove: (id: string) => void
+    isLoading?: boolean
 }
 
 export function TravelExpenseList({
     expenses,
     totalAmount,
     onRemove,
+    isLoading,
 }: TravelExpenseListProps) {
+    if (isLoading) {
+        return <TableSkeleton cols={8} />
+    }
+
     if (expenses.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">

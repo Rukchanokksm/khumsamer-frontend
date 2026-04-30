@@ -146,6 +146,7 @@ export default function CarServicePage() {
                 expenses={carExpenses.expenses}
                 totalAmount={carExpenses.totalAmount}
                 onRemove={carExpenses.removeExpense}
+                isLoading={carExpenses.isLoading}
               />
             </CardContent>
           </Card>
@@ -168,6 +169,7 @@ export default function CarServicePage() {
                 expenses={travelExpenses.expenses}
                 totalAmount={travelExpenses.totalAmount}
                 onRemove={travelExpenses.removeExpense}
+                isLoading={travelExpenses.isLoading}
               />
             </CardContent>
           </Card>
