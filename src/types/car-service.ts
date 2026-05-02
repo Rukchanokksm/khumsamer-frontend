@@ -160,6 +160,30 @@ export interface CreateCarRepairInput {
 
 export type UpdateCarRepairInput = Partial<CreateCarRepairInput>;
 
+// ---- Car Wash Place (สถานที่ล้างรถ) ----
+export type WashServiceType = "self" | "full_service";
+
+export const WASH_SERVICE_TYPE_LABELS: Record<WashServiceType, string> = {
+  self: "ล้างเอง",
+  full_service: "ฝากล้าง",
+};
+
+export interface CarWashPlace {
+  id: string;
+  name: string;
+  mapsUrl?: string;
+  serviceType: WashServiceType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateCarWashPlaceInput = {
+  name: string;
+  mapsUrl?: string;
+  serviceType: WashServiceType;
+};
+export type UpdateCarWashPlaceInput = Partial<CreateCarWashPlaceInput>;
+
 // ---- Gas Price ----
 export interface FuelPrice {
   fuelType: string;

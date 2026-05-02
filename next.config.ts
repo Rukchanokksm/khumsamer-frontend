@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
       ...proxy("bills"),
       ...proxy("garages"),
       ...proxy("car-repairs"),
+      ...proxy("car-wash-places"),
     ];
   },
 };

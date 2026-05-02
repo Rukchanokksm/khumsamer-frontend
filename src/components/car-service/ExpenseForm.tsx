@@ -27,6 +27,7 @@ import type {
     TravelExpenseCategory,
 } from "@/types/car-service"
 import { VehicleSelector } from "@/components/car-service/VehicleSelector"
+import { CarWashPlaceSelector } from "@/components/car-service/CarWashPlaceSelector"
 
 // ---- Car Expense Form ----
 const CAR_EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
@@ -56,6 +57,7 @@ interface CarExpenseFormProps {
 export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
     const [open, setOpen] = useState(false)
     const [selectedVehicleId, setSelectedVehicleId] = useState("")
+    const [selectedWashPlaceId, setSelectedWashPlaceId] = useState("")
     const [form, setForm] = useState<Partial<CreateCarExpenseInput>>({
         date: new Date().toISOString().split("T")[0],
         category: "fuel",
@@ -72,9 +74,9 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
         setForm((prev) => ({
             ...prev,
             category: v,
-            // clear fuel-specific description when switching away from fuel
-            description: v !== "fuel" ? "" : prev.description,
+            description: "",
         }))
+        if (v !== "wash") setSelectedWashPlaceId("")
     }
 
     function handleAmountChange(val: string) {
@@ -101,15 +103,16 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
+        const isWash = form.category === "wash"
         if (
             !form.carName ||
             !form.licensePlate ||
             !form.amount ||
             !form.date ||
-            !form.description ||
             !form.category
         )
             return
+        if (!form.description && !(isWash && selectedWashPlaceId)) return
 
         onAdd({
             carName: form.carName,
@@ -117,7 +120,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
             category: form.category,
             amount: Number(form.amount),
             date: form.date,
-            description: form.description,
+            description: form.description ?? "",
             liters: form.liters ? Number(form.liters) : undefined,
             pricePerLiter: form.pricePerLiter ? Number(form.pricePerLiter) : undefined,
             notes: form.notes,
@@ -125,10 +128,12 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
 
         setOpen(false)
         setSelectedVehicleId("")
+        setSelectedWashPlaceId("")
         setForm({ date: new Date().toISOString().split("T")[0], category: "fuel" })
     }
 
     const isFuel = form.category === "fuel"
+    const isWash = form.category === "wash"
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -205,7 +210,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                         </div>
                     </div>
 
-                    {/* Description — dropdown for fuel, text input otherwise */}
+                    {/* Description — varies by category */}
                     {isFuel ? (
                         <div className="space-y-1">
                             <Label>ประเภทน้ำมัน / ปั้ม *</Label>
@@ -226,11 +231,22 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+                    ) : isWash ? (
+                        <div className="space-y-1">
+                            <Label>สถานที่ล้างรถ *</Label>
+                            <CarWashPlaceSelector
+                                value={selectedWashPlaceId}
+                                onChange={(id, description) => {
+                                    setSelectedWashPlaceId(id)
+                                    set("description", description as CreateCarExpenseInput["description"])
+                                }}
+                            />
+                        </div>
                     ) : (
                         <div className="space-y-1">
                             <Label>รายละเอียด *</Label>
                             <Input
-                                placeholder="เช่น ต่อพ.ร.บ., ล้างรถ, เปลี่ยนล้อ"
+                                placeholder="เช่น ต่อพ.ร.บ., เปลี่ยนล้อ, ค่าจอดรถ"
                                 value={form.description ?? ""}
                                 onChange={(e) => set("description", e.target.value)}
                                 required
