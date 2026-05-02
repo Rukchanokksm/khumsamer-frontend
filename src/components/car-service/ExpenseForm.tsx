@@ -40,6 +40,15 @@ const CAR_EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
     { value: "other", label: "อื่นๆ" },
 ]
 
+const FUEL_PRESETS = [
+    "SHELL GASOHOL V-POWER 95",
+    "SHELL FUELSAVE GASOHOL FUELSAVE 95",
+    "CALTEX TECHRON 95",
+    "CALTEX GOLD TECHRON 95",
+    "BANGCHAK GASOHOL EVO 95",
+    "PT MAX GASOHOL 95",
+] as const
+
 interface CarExpenseFormProps {
     onAdd: (input: CreateCarExpenseInput) => void
 }
@@ -57,6 +66,37 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
         value: CreateCarExpenseInput[K],
     ) {
         setForm((prev) => ({ ...prev, [key]: value }))
+    }
+
+    function handleCategoryChange(v: ExpenseCategory) {
+        setForm((prev) => ({
+            ...prev,
+            category: v,
+            // clear fuel-specific description when switching away from fuel
+            description: v !== "fuel" ? "" : prev.description,
+        }))
+    }
+
+    function handleAmountChange(val: string) {
+        const num = Number(val)
+        set("amount", num as unknown as CreateCarExpenseInput["amount"])
+        if (form.category === "fuel" && form.pricePerLiter && num > 0) {
+            const pl = Number(form.pricePerLiter)
+            if (pl > 0) {
+                set("liters", +((num / pl).toFixed(2)) as unknown as CreateCarExpenseInput["liters"])
+            }
+        }
+    }
+
+    function handlePricePerLiterChange(val: string) {
+        const num = Number(val)
+        set("pricePerLiter", num as unknown as CreateCarExpenseInput["pricePerLiter"])
+        if (form.category === "fuel" && form.amount && num > 0) {
+            const amt = Number(form.amount)
+            if (amt > 0) {
+                set("liters", +((amt / num).toFixed(2)) as unknown as CreateCarExpenseInput["liters"])
+            }
+        }
     }
 
     function handleSubmit(e: React.FormEvent) {
@@ -79,18 +119,13 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
             date: form.date,
             description: form.description,
             liters: form.liters ? Number(form.liters) : undefined,
-            pricePerLiter: form.pricePerLiter
-                ? Number(form.pricePerLiter)
-                : undefined,
+            pricePerLiter: form.pricePerLiter ? Number(form.pricePerLiter) : undefined,
             notes: form.notes,
         })
 
         setOpen(false)
         setSelectedVehicleId("")
-        setForm({
-            date: new Date().toISOString().split("T")[0],
-            category: "fuel",
-        })
+        setForm({ date: new Date().toISOString().split("T")[0], category: "fuel" })
     }
 
     const isFuel = form.category === "fuel"
@@ -134,9 +169,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                             <Input
                                 placeholder="เช่น กข 1234"
                                 value={form.licensePlate ?? ""}
-                                onChange={(e) =>
-                                    set("licensePlate", e.target.value)
-                                }
+                                onChange={(e) => set("licensePlate", e.target.value)}
                                 required
                             />
                         </div>
@@ -147,19 +180,14 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                             <Label>ประเภท *</Label>
                             <Select
                                 value={form.category}
-                                onValueChange={(v) =>
-                                    set("category", v as ExpenseCategory)
-                                }
+                                onValueChange={(v) => handleCategoryChange(v as ExpenseCategory)}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {CAR_EXPENSE_CATEGORIES.map((c) => (
-                                        <SelectItem
-                                            key={c.value}
-                                            value={c.value}
-                                        >
+                                        <SelectItem key={c.value} value={c.value}>
                                             {c.label}
                                         </SelectItem>
                                     ))}
@@ -177,15 +205,38 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <Label>รายละเอียด *</Label>
-                        <Input
-                            placeholder="เช่น เติม V-Power สถานี Shell รัชดา"
-                            value={form.description ?? ""}
-                            onChange={(e) => set("description", e.target.value)}
-                            required
-                        />
-                    </div>
+                    {/* Description — dropdown for fuel, text input otherwise */}
+                    {isFuel ? (
+                        <div className="space-y-1">
+                            <Label>ประเภทน้ำมัน / ปั้ม *</Label>
+                            <Select
+                                value={form.description ?? ""}
+                                onValueChange={(v) => set("description", v)}
+                                required
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="เลือกประเภทน้ำมัน" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {FUEL_PRESETS.map((f) => (
+                                        <SelectItem key={f} value={f}>
+                                            {f}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            <Label>รายละเอียด *</Label>
+                            <Input
+                                placeholder="เช่น ต่อพ.ร.บ., ล้างรถ, เปลี่ยนล้อ"
+                                value={form.description ?? ""}
+                                onChange={(e) => set("description", e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
 
                     <div className="space-y-1">
                         <Label>จำนวนเงิน (บาท) *</Label>
@@ -195,38 +246,13 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                             step="0.01"
                             placeholder="0.00"
                             value={form.amount ?? ""}
-                            onChange={(e) =>
-                                set(
-                                    "amount",
-                                    Number(
-                                        e.target.value,
-                                    ) as unknown as CreateCarExpenseInput["amount"],
-                                )
-                            }
+                            onChange={(e) => handleAmountChange(e.target.value)}
                             required
                         />
                     </div>
 
                     {isFuel && (
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <Label>จำนวนลิตร</Label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    value={form.liters ?? ""}
-                                    onChange={(e) =>
-                                        set(
-                                            "liters",
-                                            Number(
-                                                e.target.value,
-                                            ) as unknown as CreateCarExpenseInput["liters"],
-                                        )
-                                    }
-                                />
-                            </div>
                             <div className="space-y-1">
                                 <Label>ราคา/ลิตร (บาท)</Label>
                                 <Input
@@ -235,13 +261,24 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                                     step="0.01"
                                     placeholder="0.00"
                                     value={form.pricePerLiter ?? ""}
+                                    onChange={(e) => handlePricePerLiterChange(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label>
+                                    จำนวนลิตร
+                                    {form.pricePerLiter && form.amount
+                                        ? <span className="ml-1 text-xs text-muted-foreground font-normal">(คำนวณอัตโนมัติ)</span>
+                                        : null}
+                                </Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={form.liters ?? ""}
                                     onChange={(e) =>
-                                        set(
-                                            "pricePerLiter",
-                                            Number(
-                                                e.target.value,
-                                            ) as unknown as CreateCarExpenseInput["pricePerLiter"],
-                                        )
+                                        set("liters", Number(e.target.value) as unknown as CreateCarExpenseInput["liters"])
                                     }
                                 />
                             </div>
@@ -259,11 +296,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                     </div>
 
                     <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                        >
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             ยกเลิก
                         </Button>
                         <Button type="submit">บันทึก</Button>
@@ -275,10 +308,8 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
 }
 
 // ---- Travel Expense Form ----
+// fuel / toll / parking ย้ายไปอยู่ใน CarExpense แล้ว
 const TRAVEL_CATEGORIES: { value: TravelExpenseCategory; label: string }[] = [
-    { value: "fuel", label: "เติมน้ำมัน" },
-    { value: "toll", label: "ค่าทางด่วน/ทางหลวง" },
-    { value: "parking", label: "ค่าจอดรถ" },
     { value: "accommodation", label: "ค่าที่พัก" },
     { value: "food", label: "ค่าอาหาร" },
     { value: "ferry", label: "ค่าเรือ/เฟอร์รี่" },
@@ -294,7 +325,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
     const [selectedVehicleId, setSelectedVehicleId] = useState("")
     const [form, setForm] = useState<Partial<CreateTravelExpenseInput>>({
         date: new Date().toISOString().split("T")[0],
-        category: "fuel",
+        category: "accommodation",
     })
 
     function set<K extends keyof CreateTravelExpenseInput>(
@@ -325,23 +356,14 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
             amount: Number(form.amount),
             date: form.date,
             description: form.description,
-            liters: form.liters ? Number(form.liters) : undefined,
-            pricePerLiter: form.pricePerLiter
-                ? Number(form.pricePerLiter)
-                : undefined,
             distance: form.distance ? Number(form.distance) : undefined,
             notes: form.notes,
         })
 
         setOpen(false)
         setSelectedVehicleId("")
-        setForm({
-            date: new Date().toISOString().split("T")[0],
-            category: "fuel",
-        })
+        setForm({ date: new Date().toISOString().split("T")[0], category: "accommodation" })
     }
-
-    const isFuel = form.category === "fuel"
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -392,9 +414,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                             <Input
                                 placeholder="เช่น กข 1234"
                                 value={form.licensePlate ?? ""}
-                                onChange={(e) =>
-                                    set("licensePlate", e.target.value)
-                                }
+                                onChange={(e) => set("licensePlate", e.target.value)}
                                 required
                             />
                         </div>
@@ -405,19 +425,14 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                             <Label>ประเภท *</Label>
                             <Select
                                 value={form.category}
-                                onValueChange={(v) =>
-                                    set("category", v as TravelExpenseCategory)
-                                }
+                                onValueChange={(v) => set("category", v as TravelExpenseCategory)}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {TRAVEL_CATEGORIES.map((c) => (
-                                        <SelectItem
-                                            key={c.value}
-                                            value={c.value}
-                                        >
+                                        <SelectItem key={c.value} value={c.value}>
                                             {c.label}
                                         </SelectItem>
                                     ))}
@@ -438,7 +453,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                     <div className="space-y-1">
                         <Label>รายละเอียด *</Label>
                         <Input
-                            placeholder="เช่น เติมน้ำมัน V-Power ขาไป"
+                            placeholder="เช่น โรงแรม A, ร้านข้าวต้ม, เฟอร์รี่ขาไป"
                             value={form.description ?? ""}
                             onChange={(e) => set("description", e.target.value)}
                             required
@@ -455,12 +470,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                                 placeholder="0.00"
                                 value={form.amount ?? ""}
                                 onChange={(e) =>
-                                    set(
-                                        "amount",
-                                        Number(
-                                            e.target.value,
-                                        ) as unknown as CreateTravelExpenseInput["amount"],
-                                    )
+                                    set("amount", Number(e.target.value) as unknown as CreateTravelExpenseInput["amount"])
                                 }
                                 required
                             />
@@ -473,57 +483,11 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                                 placeholder="0"
                                 value={form.distance ?? ""}
                                 onChange={(e) =>
-                                    set(
-                                        "distance",
-                                        Number(
-                                            e.target.value,
-                                        ) as unknown as CreateTravelExpenseInput["distance"],
-                                    )
+                                    set("distance", Number(e.target.value) as unknown as CreateTravelExpenseInput["distance"])
                                 }
                             />
                         </div>
                     </div>
-
-                    {isFuel && (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <Label>จำนวนลิตร</Label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    value={form.liters ?? ""}
-                                    onChange={(e) =>
-                                        set(
-                                            "liters",
-                                            Number(
-                                                e.target.value,
-                                            ) as unknown as CreateTravelExpenseInput["liters"],
-                                        )
-                                    }
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <Label>ราคา/ลิตร (บาท)</Label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    value={form.pricePerLiter ?? ""}
-                                    onChange={(e) =>
-                                        set(
-                                            "pricePerLiter",
-                                            Number(
-                                                e.target.value,
-                                            ) as unknown as CreateTravelExpenseInput["pricePerLiter"],
-                                        )
-                                    }
-                                />
-                            </div>
-                        </div>
-                    )}
 
                     <div className="space-y-1">
                         <Label>หมายเหตุ</Label>
@@ -536,11 +500,7 @@ export function TravelExpenseForm({ onAdd }: TravelExpenseFormProps) {
                     </div>
 
                     <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                        >
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             ยกเลิก
                         </Button>
                         <Button type="submit">บันทึก</Button>

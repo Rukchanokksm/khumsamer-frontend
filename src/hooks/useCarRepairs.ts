@@ -2,40 +2,39 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiJson } from "@/lib/api";
-import type { Bill, CreateBillInput, UpdateBillInput } from "@/types/bill";
+import type { CarRepair, CreateCarRepairInput, UpdateCarRepairInput } from "@/types/car-service";
 
-const KEY = ["bills"] as const;
+const KEY = ["car-repairs"] as const;
 
-export function useBills() {
+export function useCarRepairs() {
   const qc = useQueryClient();
 
   const query = useQuery({
     queryKey: KEY,
     queryFn: () =>
-      apiJson<{ bills: Bill[] }>("/api/bills").then((d) => d.bills),
+      apiJson<{ repairs: CarRepair[] }>("/api/car-repairs").then((d) => d.repairs),
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateBillInput) =>
-      apiJson<{ bill: Bill }>("/api/bills", {
+    mutationFn: (input: CreateCarRepairInput) =>
+      apiJson<{ repair: CarRepair }>("/api/car-repairs", {
         method: "POST",
         body: JSON.stringify(input),
-      }).then((d) => d.bill),
+      }).then((d) => d.repair),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...input }: UpdateBillInput & { id: string }) =>
-      apiJson<{ bill: Bill }>(`/api/bills/${id}`, {
+    mutationFn: ({ id, ...input }: UpdateCarRepairInput & { id: string }) =>
+      apiJson<{ repair: CarRepair }>(`/api/car-repairs/${id}`, {
         method: "PATCH",
         body: JSON.stringify(input),
-      }).then((d) => d.bill),
+      }).then((d) => d.repair),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiJson(`/api/bills/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => apiJson(`/api/car-repairs/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 
@@ -43,7 +42,7 @@ export function useBills() {
     mutationFn: async ({ id, file }: { id: string; file: File }) => {
       const form = new FormData();
       form.append("receipt", file);
-      const res = await apiFetch(`/api/bills/${id}/receipt`, {
+      const res = await apiFetch(`/api/car-repairs/${id}/receipt`, {
         method: "POST",
         body: form,
       });
@@ -56,25 +55,22 @@ export function useBills() {
 
   const removeReceiptMutation = useMutation({
     mutationFn: (id: string) =>
-      apiJson(`/api/bills/${id}/receipt`, { method: "DELETE" }),
+      apiJson(`/api/car-repairs/${id}/receipt`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 
   return {
-    bills: query.data ?? [],
+    repairs: query.data ?? [],
     isLoading: query.isLoading,
-    isError: query.isError,
-    addBill: (input: CreateBillInput) => createMutation.mutateAsync(input),
-    updateBill: (id: string, input: UpdateBillInput) =>
-      updateMutation.mutate({ id, ...input }),
-    markPaid: (id: string) =>
-      updateMutation.mutate({ id, status: "paid" }),
-    removeBill: (id: string) => deleteMutation.mutate(id),
+    addRepair: (input: CreateCarRepairInput) => createMutation.mutateAsync(input),
+    updateRepair: (id: string, input: UpdateCarRepairInput) =>
+      updateMutation.mutateAsync({ id, ...input }),
+    removeRepair: (id: string) => deleteMutation.mutate(id),
     uploadReceipt: (id: string, file: File) =>
       uploadReceiptMutation.mutate({ id, file }),
     removeReceipt: (id: string) => removeReceiptMutation.mutate(id),
     isCreating: createMutation.isPending,
     isUploading: uploadReceiptMutation.isPending,
-    isUpdating: updateMutation.isPending,
+    uploadingId: uploadReceiptMutation.variables?.id ?? null,
   };
 }

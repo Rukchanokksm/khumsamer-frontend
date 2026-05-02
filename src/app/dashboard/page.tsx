@@ -27,8 +27,8 @@ const features = [
   },
   {
     icon: Car,
-    title: "Car Service",
-    description: "บันทึกประวัติการบำรุงรักษารถยนต์",
+    title: "Car History",
+    description: "ประวัติการดูแลและค่าใช้จ่ายรถยนต์รายเดือน",
     href: "/car-service",
     color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
     roles: ["admin", "user"] as const,

@@ -1,13 +1,20 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Droplets, Zap, Home, UtensilsCrossed, Car,
   ShoppingCart, Wifi, Smartphone, Shield, Receipt,
   CheckCircle2, Upload, Trash2, ExternalLink, X, Loader2,
+  RefreshCw, Eye, FileText,
 } from "lucide-react";
 import type { Bill, BillCategory, BillStatus } from "@/types/bill";
 
@@ -97,7 +104,13 @@ export function BillCard({
   isUpdating,
 }: BillCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const Icon = CATEGORY_ICONS[bill.category];
+
+  const isPdf =
+    bill.receiptPath?.toLowerCase().endsWith(".pdf") ||
+    bill.receiptUrl?.toLowerCase().includes(".pdf") ||
+    false;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -115,102 +128,118 @@ export function BillCard({
       : "";
 
   return (
-    <Card className={cardBorder}>
-      <CardContent className="p-4 space-y-3">
-        {/* Top row: icon + name + amount */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className={`mt-0.5 shrink-0 ${ICON_COLORS[bill.category]}`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm leading-snug truncate">
-                {bill.name}
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                  {CATEGORY_LABELS[bill.category]}
-                </Badge>
-                {bill.isInstallment && bill.installmentNo && bill.totalInstallments && (
-                  <Badge variant="outline" className="text-xs px-1.5 py-0">
-                    งวด {bill.installmentNo}/{bill.totalInstallments}
+    <>
+      <Card className={cardBorder}>
+        <CardContent className="p-4 space-y-3">
+          {/* Top row: icon + name + amount */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className={`mt-0.5 shrink-0 ${ICON_COLORS[bill.category]}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm leading-snug truncate">
+                  {bill.name}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                    {CATEGORY_LABELS[bill.category]}
                   </Badge>
-                )}
+                  {bill.isInstallment && bill.installmentNo && bill.totalInstallments && (
+                    <Badge variant="outline" className="text-xs px-1.5 py-0">
+                      งวด {bill.installmentNo}/{bill.totalInstallments}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
+            <div className="text-right shrink-0">
+              <p className="font-bold text-base">฿{formatTHB(bill.amount)}</p>
+              <Badge variant="secondary" className={`text-xs mt-1 ${STATUS_STYLES[bill.status]}`}>
+                {STATUS_LABELS[bill.status]}
+              </Badge>
+            </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="font-bold text-base">฿{formatTHB(bill.amount)}</p>
-            <Badge variant="secondary" className={`text-xs mt-1 ${STATUS_STYLES[bill.status]}`}>
-              {STATUS_LABELS[bill.status]}
-            </Badge>
+
+          {/* Date row */}
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
+            <span>ครบกำหนด: {formatDate(bill.dueDate)}</span>
+            {bill.paidDate && (
+              <span className="text-green-600 dark:text-green-400">
+                จ่ายเมื่อ: {formatDate(bill.paidDate)}
+              </span>
+            )}
           </div>
-        </div>
 
-        {/* Date row */}
-        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
-          <span>ครบกำหนด: {formatDate(bill.dueDate)}</span>
-          {bill.paidDate && (
-            <span className="text-green-600 dark:text-green-400">
-              จ่ายเมื่อ: {formatDate(bill.paidDate)}
-            </span>
-          )}
-        </div>
-
-        {/* Notes */}
-        {bill.notes && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{bill.notes}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/60">
-          {bill.status !== "paid" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950"
-              onClick={() => onMarkPaid(bill.id)}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-3 w-3" />
-              )}
-              จ่ายแล้ว
-            </Button>
+          {/* Notes */}
+          {bill.notes && (
+            <p className="text-xs text-muted-foreground line-clamp-2">{bill.notes}</p>
           )}
 
-          {bill.receiptUrl ? (
-            <>
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/60">
+            {bill.status !== "paid" && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 gap-1 text-xs"
-                asChild
+                className="h-7 gap-1 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950"
+                onClick={() => onMarkPaid(bill.id)}
+                disabled={isUpdating}
               >
-                <a href={bill.receiptUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3 w-3" /> ดูใบเสร็จ
-                </a>
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3 w-3" />
+                )}
+                จ่ายแล้ว
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
-                onClick={() => onRemoveReceipt(bill.id)}
-              >
-                <X className="h-3 w-3" /> ลบใบเสร็จ
-              </Button>
-            </>
-          ) : (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+            )}
+
+            {/* Hidden file input — shared for both upload and replace */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {bill.receiptUrl ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Eye className="h-3 w-3" />
+                  ดูใบเสร็จ
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                  เปลี่ยนรูป
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => onRemoveReceipt(bill.id)}
+                >
+                  <X className="h-3 w-3" />
+                  ลบรูป
+                </Button>
+              </>
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
@@ -225,19 +254,71 @@ export function BillCard({
                 )}
                 อัพโหลดใบเสร็จ
               </Button>
-            </>
-          )}
+            )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 ml-auto text-muted-foreground hover:text-destructive"
-            onClick={() => onRemove(bill.id)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 ml-auto text-muted-foreground hover:text-destructive"
+              onClick={() => onRemove(bill.id)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Receipt preview dialog */}
+      {bill.receiptUrl && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="truncate pr-6">
+                ใบเสร็จ — {bill.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-1">
+              {isPdf ? (
+                <div className="flex flex-col items-center gap-4 py-10">
+                  <FileText className="h-14 w-14 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">ไฟล์ PDF</p>
+                  <Button asChild variant="outline">
+                    <a
+                      href={bill.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      เปิดในแท็บใหม่
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-full overflow-auto rounded-md bg-muted/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={bill.receiptUrl}
+                      alt="ใบเสร็จ"
+                      className="max-h-[60vh] w-full object-contain"
+                    />
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={bill.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      เปิดขนาดเต็ม
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }

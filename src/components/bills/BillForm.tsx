@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Loader2, Paperclip, Plus, X } from "lucide-react";
 import type { BillCategory, CreateBillInput } from "@/types/bill";
 
 const CATEGORIES: { value: BillCategory; label: string }[] = [
@@ -42,38 +42,76 @@ const DEFAULT_FORM: Partial<CreateBillInput> = {
 };
 
 interface BillFormProps {
-  onAdd: (input: CreateBillInput) => void;
+  onAdd: (input: CreateBillInput, receiptFile?: File) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function BillForm({ onAdd }: BillFormProps) {
+export function BillForm({ onAdd, isLoading }: BillFormProps) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Partial<CreateBillInput>>(DEFAULT_FORM);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof CreateBillInput>(key: K, value: CreateBillInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.name || !form.category || !form.amount || !form.dueDate) return;
-
-    onAdd({
-      name: form.name,
-      category: form.category,
-      amount: Number(form.amount),
-      dueDate: form.dueDate,
-      isInstallment: form.isInstallment ?? false,
-      installmentNo: form.isInstallment && form.installmentNo ? Number(form.installmentNo) : undefined,
-      totalInstallments: form.isInstallment && form.totalInstallments ? Number(form.totalInstallments) : undefined,
-      notes: form.notes || undefined,
-    });
-
-    setOpen(false);
-    setForm(DEFAULT_FORM);
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setReceiptFile(file);
+    e.target.value = "";
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name || !form.category || !form.amount || !form.dueDate) return;
+    setSubmitting(true);
+    try {
+      await onAdd(
+        {
+          name: form.name,
+          category: form.category,
+          amount: Number(form.amount),
+          dueDate: form.dueDate,
+          isInstallment: form.isInstallment ?? false,
+          installmentNo:
+            form.isInstallment && form.installmentNo
+              ? Number(form.installmentNo)
+              : undefined,
+          totalInstallments:
+            form.isInstallment && form.totalInstallments
+              ? Number(form.totalInstallments)
+              : undefined,
+          notes: form.notes || undefined,
+        },
+        receiptFile ?? undefined,
+      );
+      setOpen(false);
+      setForm(DEFAULT_FORM);
+      setReceiptFile(null);
+    } catch {
+      // mutation error is handled by React Query
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const busy = submitting || isLoading;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!busy) {
+          setOpen(v);
+          if (!v) {
+            setForm(DEFAULT_FORM);
+            setReceiptFile(null);
+          }
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1">
           <Plus className="h-4 w-4" /> เพิ่มบิล
@@ -121,7 +159,14 @@ export function BillForm({ onAdd }: BillFormProps) {
                 step="0.01"
                 placeholder="0.00"
                 value={form.amount ?? ""}
-                onChange={(e) => set("amount", Number(e.target.value) as unknown as CreateBillInput["amount"])}
+                onChange={(e) =>
+                  set(
+                    "amount",
+                    Number(
+                      e.target.value,
+                    ) as unknown as CreateBillInput["amount"],
+                  )
+                }
                 required
               />
             </div>
@@ -157,7 +202,14 @@ export function BillForm({ onAdd }: BillFormProps) {
                     min="1"
                     placeholder="1"
                     value={form.installmentNo ?? ""}
-                    onChange={(e) => set("installmentNo", Number(e.target.value) as unknown as CreateBillInput["installmentNo"])}
+                    onChange={(e) =>
+                      set(
+                        "installmentNo",
+                        Number(
+                          e.target.value,
+                        ) as unknown as CreateBillInput["installmentNo"],
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-1">
@@ -167,7 +219,14 @@ export function BillForm({ onAdd }: BillFormProps) {
                     min="1"
                     placeholder="60"
                     value={form.totalInstallments ?? ""}
-                    onChange={(e) => set("totalInstallments", Number(e.target.value) as unknown as CreateBillInput["totalInstallments"])}
+                    onChange={(e) =>
+                      set(
+                        "totalInstallments",
+                        Number(
+                          e.target.value,
+                        ) as unknown as CreateBillInput["totalInstallments"],
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -184,11 +243,59 @@ export function BillForm({ onAdd }: BillFormProps) {
             />
           </div>
 
+          {/* Receipt upload */}
+          <div className="space-y-1">
+            <Label>แนบใบเสร็จ (ไม่บังคับ)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {receiptFile ? (
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate text-xs">{receiptFile.name}</span>
+                <button
+                  type="button"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => setReceiptFile(null)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                เลือกไฟล์รูปหรือ PDF
+              </Button>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                setForm(DEFAULT_FORM);
+                setReceiptFile(null);
+              }}
+            >
               ยกเลิก
             </Button>
-            <Button type="submit">บันทึก</Button>
+            <Button type="submit" disabled={busy} className="gap-1.5">
+              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              บันทึก
+            </Button>
           </div>
         </form>
       </DialogContent>

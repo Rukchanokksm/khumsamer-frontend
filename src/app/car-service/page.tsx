@@ -1,26 +1,174 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Wrench, Receipt, MapPin, Car, ChevronRight, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Wrench, Receipt, MapPin, CalendarDays, History,
+} from "lucide-react";
 import { GasPriceWidget } from "@/components/car-service/GasPriceWidget";
 import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/ExpenseForm";
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
-import { VehicleSelector } from "@/components/car-service/VehicleSelector";
+import { CarRepairForm } from "@/components/car-service/CarRepairForm";
+import { CarRepairList } from "@/components/car-service/CarRepairList";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
-import { useVehicles } from "@/hooks/useVehicles";
+import { useCarRepairs } from "@/hooks/useCarRepairs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BackButton } from "@/components/back-button";
 
-export default function CarServicePage() {
+const CURRENT_MONTH = new Date().toISOString().slice(0, 7);
+
+const CAR_CATEGORY_LABELS: Record<string, string> = {
+  fuel: "เติมน้ำมัน",
+  parking: "จอดรถ",
+  toll: "ทางด่วน",
+  insurance: "ประกัน",
+  tax: "ภาษีรถ",
+  wash: "ล้างรถ",
+  accessories: "อุปกรณ์เสริม",
+  other: "อื่นๆ",
+};
+
+const TRAVEL_CATEGORY_LABELS: Record<string, string> = {
+  accommodation: "ที่พัก",
+  food: "อาหาร",
+  ferry: "เรือ/เฟอร์รี่",
+  other: "อื่นๆ",
+};
+
+function formatTHB(n: number) {
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMonth(ym: string) {
+  const [y, m] = ym.split("-");
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+  });
+}
+
+// ---- Monthly filter + summary row ----
+interface MonthFilterProps {
+  month: string;
+  onChange: (m: string) => void;
+  options: string[];
+  count: number;
+  summary: [string, number][] | null;
+  categoryLabels: Record<string, string>;
+  total: number;
+}
+
+function MonthFilter({ month, onChange, options, count, summary, categoryLabels, total }: MonthFilterProps) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={month} onValueChange={onChange}>
+            <SelectTrigger className="w-52 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทั้งหมด</SelectItem>
+              {options.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {formatMonth(m)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {month !== "all" && (
+          <span className="text-xs text-muted-foreground">
+            {count} รายการ · รวม{" "}
+            <span className="font-semibold text-foreground">฿{formatTHB(total)}</span>
+          </span>
+        )}
+      </div>
+
+      {/* category breakdown */}
+      {summary && summary.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {summary.map(([cat, amt]) => (
+            <div
+              key={cat}
+              className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1 text-xs"
+            >
+              <span className="text-muted-foreground">{categoryLabels[cat] ?? cat}</span>
+              <span className="font-semibold">฿{formatTHB(amt)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Page ----
+export default function CarHistoryPage() {
   const carExpenses = useCarExpenses();
   const travelExpenses = useTravelExpenses();
-  const { vehicles } = useVehicles();
-  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const repairs = useCarRepairs();
+
+  // Monthly filter — car expenses
+  const [carMonth, setCarMonth] = useState(CURRENT_MONTH);
+  const carMonthOptions = useMemo(() => {
+    const s = new Set([CURRENT_MONTH]);
+    carExpenses.expenses.forEach((e) => s.add(e.date.slice(0, 7)));
+    return Array.from(s).sort().reverse();
+  }, [carExpenses.expenses]);
+
+  const filteredCar = useMemo(
+    () =>
+      carMonth === "all"
+        ? carExpenses.expenses
+        : carExpenses.expenses.filter((e) => e.date.startsWith(carMonth)),
+    [carExpenses.expenses, carMonth],
+  );
+  const filteredCarTotal = useMemo(
+    () => filteredCar.reduce((s, e) => s + e.amount, 0),
+    [filteredCar],
+  );
+  const carSummary = useMemo<[string, number][] | null>(() => {
+    if (carMonth === "all") return null;
+    const s: Record<string, number> = {};
+    filteredCar.forEach((e) => { s[e.category] = (s[e.category] ?? 0) + e.amount; });
+    return Object.entries(s).sort(([, a], [, b]) => b - a);
+  }, [filteredCar, carMonth]);
+
+  // Monthly filter — travel expenses
+  const [travelMonth, setTravelMonth] = useState(CURRENT_MONTH);
+  const travelMonthOptions = useMemo(() => {
+    const s = new Set([CURRENT_MONTH]);
+    travelExpenses.expenses.forEach((e) => s.add(e.date.slice(0, 7)));
+    return Array.from(s).sort().reverse();
+  }, [travelExpenses.expenses]);
+
+  const filteredTravel = useMemo(
+    () =>
+      travelMonth === "all"
+        ? travelExpenses.expenses
+        : travelExpenses.expenses.filter((e) => e.date.startsWith(travelMonth)),
+    [travelExpenses.expenses, travelMonth],
+  );
+  const filteredTravelTotal = useMemo(
+    () => filteredTravel.reduce((s, e) => s + e.amount, 0),
+    [filteredTravel],
+  );
+  const travelSummary = useMemo<[string, number][] | null>(() => {
+    if (travelMonth === "all") return null;
+    const s: Record<string, number> = {};
+    filteredTravel.forEach((e) => { s[e.category] = (s[e.category] ?? 0) + e.amount; });
+    return Object.entries(s).sort(([, a], [, b]) => b - a);
+  }, [filteredTravel, travelMonth]);
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-6">
@@ -28,8 +176,11 @@ export default function CarServicePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <BackButton />
-          <h1 className="text-3xl font-bold mt-2">Car Service</h1>
-          <p className="text-muted-foreground mt-1">ประวัติการบำรุงรักษาและค่าใช้จ่ายรถยนต์</p>
+          <h1 className="text-3xl font-bold mt-2 flex items-center gap-2">
+            <History className="h-7 w-7 text-orange-500" />
+            Car History
+          </h1>
+          <p className="text-muted-foreground mt-1">ประวัติการดูแลและค่าใช้จ่ายรถยนต์</p>
         </div>
         <ThemeToggle />
       </div>
@@ -57,74 +208,35 @@ export default function CarServicePage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ---- Car Service History ---- */}
-        <TabsContent value="service" className="mt-4 space-y-4">
+        {/* ---- Service History ---- */}
+        <TabsContent value="service" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="space-y-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Wrench className="h-5 w-5 text-orange-500" />
                   ประวัติการซ่อมบำรุง
                 </CardTitle>
-                <Link href="/vehicles/new">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <Plus className="h-4 w-4" /> เพิ่มรถ
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label className="text-sm">เลือกรถที่ต้องการดูประวัติ</Label>
-                <VehicleSelector
-                  value={selectedVehicleId}
-                  onChange={(id) => setSelectedVehicleId(id)}
+                <CarRepairForm
+                  onAdd={async (input, receiptFile) => {
+                    const repair = await repairs.addRepair(input);
+                    if (receiptFile) repairs.uploadReceipt(repair.id, receiptFile);
+                    return repair;
+                  }}
+                  isLoading={repairs.isCreating}
                 />
               </div>
-
-              {selectedVehicleId ? (() => {
-                const v = vehicles.find((v) => v.id === selectedVehicleId);
-                return v ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/40">
-                      <div className="flex items-center gap-3">
-                        <Car className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium text-sm">{v.brand} {v.model}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{v.licensePlate}</p>
-                        </div>
-                      </div>
-                      <Link href={`/vehicles/${v.id}`}>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">
-                          ดูข้อมูลรถ <ChevronRight className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    </div>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Wrench className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">ยังไม่มีประวัติซ่อมบำรุงสำหรับรถคันนี้</p>
-                      <p className="text-xs mt-1">ฟีเจอร์บันทึกการซ่อมบำรุงจะเปิดให้ใช้เร็วๆ นี้</p>
-                    </div>
-                  </div>
-                ) : null;
-              })() : (
-                vehicles.length > 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Car className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">เลือกรถเพื่อดูประวัติการซ่อมบำรุง</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground space-y-3">
-                    <Car className="h-8 w-8 mx-auto opacity-30" />
-                    <p className="text-sm">เพิ่มข้อมูลรถก่อนเพื่อเริ่มบันทึกประวัติซ่อมบำรุง</p>
-                    <Link href="/vehicles/new">
-                      <Button size="sm" className="gap-1">
-                        <Plus className="h-4 w-4" /> เพิ่มรถ
-                      </Button>
-                    </Link>
-                  </div>
-                )
-              )}
+            </CardHeader>
+            <CardContent>
+              <CarRepairList
+                repairs={repairs.repairs}
+                isLoading={repairs.isLoading}
+                onUpdate={repairs.updateRepair}
+                onRemove={repairs.removeRepair}
+                onUpload={repairs.uploadReceipt}
+                onRemoveReceipt={repairs.removeReceipt}
+                uploadingId={repairs.uploadingId}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -132,7 +244,7 @@ export default function CarServicePage() {
         {/* ---- Car Expenses ---- */}
         <TabsContent value="expenses" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="space-y-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Receipt className="h-5 w-5 text-blue-500" />
@@ -140,11 +252,20 @@ export default function CarServicePage() {
                 </CardTitle>
                 <CarExpenseForm onAdd={carExpenses.addExpense} />
               </div>
+              <MonthFilter
+                month={carMonth}
+                onChange={setCarMonth}
+                options={carMonthOptions}
+                count={filteredCar.length}
+                summary={carSummary}
+                categoryLabels={CAR_CATEGORY_LABELS}
+                total={filteredCarTotal}
+              />
             </CardHeader>
             <CardContent>
               <CarExpenseList
-                expenses={carExpenses.expenses}
-                totalAmount={carExpenses.totalAmount}
+                expenses={filteredCar}
+                totalAmount={filteredCarTotal}
                 onRemove={carExpenses.removeExpense}
                 isLoading={carExpenses.isLoading}
               />
@@ -155,7 +276,7 @@ export default function CarServicePage() {
         {/* ---- Travel Expenses ---- */}
         <TabsContent value="travel" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="space-y-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <MapPin className="h-5 w-5 text-green-500" />
@@ -163,11 +284,20 @@ export default function CarServicePage() {
                 </CardTitle>
                 <TravelExpenseForm onAdd={travelExpenses.addExpense} />
               </div>
+              <MonthFilter
+                month={travelMonth}
+                onChange={setTravelMonth}
+                options={travelMonthOptions}
+                count={filteredTravel.length}
+                summary={travelSummary}
+                categoryLabels={TRAVEL_CATEGORY_LABELS}
+                total={filteredTravelTotal}
+              />
             </CardHeader>
             <CardContent>
               <TravelExpenseList
-                expenses={travelExpenses.expenses}
-                totalAmount={travelExpenses.totalAmount}
+                expenses={filteredTravel}
+                totalAmount={filteredTravelTotal}
                 onRemove={travelExpenses.removeExpense}
                 isLoading={travelExpenses.isLoading}
               />

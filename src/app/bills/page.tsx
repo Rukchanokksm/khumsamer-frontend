@@ -10,7 +10,7 @@ import { BillForm } from "@/components/bills/BillForm";
 import { BillCard } from "@/components/bills/BillCard";
 import { useBills } from "@/hooks/useBills";
 import { Receipt, TrendingDown, AlertCircle, CalendarClock } from "lucide-react";
-import type { BillStatus } from "@/types/bill";
+import type { BillStatus, CreateBillInput } from "@/types/bill";
 
 function formatTHB(amount: number) {
   return amount.toLocaleString("th-TH", {
@@ -52,7 +52,7 @@ const TAB_FILTERS: { value: "all" | BillStatus; label: string }[] = [
 ];
 
 export default function BillsPage() {
-  const { bills, isLoading, addBill, markPaid, removeBill, uploadReceipt, removeReceipt, isUploading, isUpdating } = useBills();
+  const { bills, isLoading, addBill, markPaid, removeBill, uploadReceipt, removeReceipt, isCreating, isUploading, isUpdating } = useBills();
   const [activeTab, setActiveTab] = useState<"all" | BillStatus>("all");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
@@ -123,6 +123,14 @@ export default function BillsPage() {
     if (!isUploading) setUploadingId(null);
   }, [isUploading]);
 
+  async function handleAdd(input: CreateBillInput, receiptFile?: File) {
+    const bill = await addBill(input);
+    if (receiptFile) {
+      setUploadingId(bill.id);
+      uploadReceipt(bill.id, receiptFile);
+    }
+  }
+
   function handleUpload(id: string, file: File) {
     setUploadingId(id);
     uploadReceipt(id, file);
@@ -139,7 +147,7 @@ export default function BillsPage() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <BillForm onAdd={addBill} />
+          <BillForm onAdd={handleAdd} isLoading={isCreating} />
         </div>
       </div>
 

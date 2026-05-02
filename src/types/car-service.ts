@@ -102,6 +102,64 @@ export interface Vehicle {
 export type CreateVehicleInput = Omit<Vehicle, "id" | "createdAt" | "updatedAt">;
 export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
+// ---- Garage (สถานที่ซ่อม) ----
+export interface Garage {
+  id: string;
+  name: string;
+  mapsUrl?: string;
+  phones: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateGarageInput = Pick<Garage, "name" | "mapsUrl" | "phones">;
+export type UpdateGarageInput = Partial<CreateGarageInput>;
+
+// ---- Car Repair ----
+export type RepairType =
+  | "oil_change"
+  | "tire"
+  | "brake"
+  | "battery"
+  | "filter"
+  | "inspection"
+  | "body_repair"
+  | "electrical"
+  | "ac"
+  | "transmission"
+  | "wash"
+  | "other";
+
+export interface CarRepair {
+  id: string;
+  carName: string;
+  licensePlate: string;
+  repairType: RepairType;
+  date: string;
+  cost: number;
+  description: string;
+  notes?: string;
+  garageId?: string;
+  garage?: Pick<Garage, "id" | "name" | "mapsUrl" | "phones">;
+  receiptUrl?: string;
+  receiptPath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCarRepairInput {
+  carName: string;
+  licensePlate: string;
+  repairType: RepairType;
+  date: string;
+  cost: number;
+  description: string;
+  notes?: string;
+  garageId?: string | null;
+}
+
+export type UpdateCarRepairInput = Partial<CreateCarRepairInput>;
+
 // ---- Gas Price ----
 export interface FuelPrice {
   fuelType: string;

@@ -25,6 +25,18 @@ const nextConfig: NextConfig = {
         source: "/api/travel-expenses/:path*",
         destination: `${BACKEND_URL}/api/travel-expenses/:path*`,
       },
+      {
+        source: "/api/bills/:path*",
+        destination: `${BACKEND_URL}/api/bills/:path*`,
+      },
+      {
+        source: "/api/garages/:path*",
+        destination: `${BACKEND_URL}/api/garages/:path*`,
+      },
+      {
+        source: "/api/car-repairs/:path*",
+        destination: `${BACKEND_URL}/api/car-repairs/:path*`,
+      },
     ];
   },
 };
