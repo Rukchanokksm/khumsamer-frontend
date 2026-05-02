@@ -29,8 +29,7 @@ async function callCredentialsSignIn(email: string, password: string) {
     csrfToken,
     email,
     password,
-    callbackUrl:
-      typeof window !== "undefined" ? window.location.origin : "/",
+    callbackUrl: "/",
     json: "true",
   });
 
@@ -53,8 +52,7 @@ async function callSignOut() {
   const csrfToken = await getCsrfToken();
   const body = new URLSearchParams({
     csrfToken,
-    callbackUrl:
-      typeof window !== "undefined" ? window.location.origin : "/",
+    callbackUrl: "/",
     json: "true",
   });
   await apiFetch("/api/auth/signout?json=true", {
