@@ -3,6 +3,15 @@ import path from "path";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4000";
 
+// `:path*` เมื่อว่างจะสร้าง trailing slash ที่ destination → ทำให้เกิด 308
+// แก้โดยแยก base path (ไม่มี sub-path) และ sub-path ออกจากกัน
+function proxy(prefix: string) {
+  return [
+    { source: `/api/${prefix}`, destination: `${BACKEND_URL}/api/${prefix}` },
+    { source: `/api/${prefix}/:path+`, destination: `${BACKEND_URL}/api/${prefix}/:path+` },
+  ];
+}
+
 const nextConfig: NextConfig = {
   trailingSlash: false,
   turbopack: {
@@ -10,34 +19,13 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      {
-        source: "/api/auth/:path*",
-        destination: `${BACKEND_URL}/api/auth/:path*`,
-      },
-      {
-        source: "/api/vehicles/:path*",
-        destination: `${BACKEND_URL}/api/vehicles/:path*`,
-      },
-      {
-        source: "/api/car-expenses/:path*",
-        destination: `${BACKEND_URL}/api/car-expenses/:path*`,
-      },
-      {
-        source: "/api/travel-expenses/:path*",
-        destination: `${BACKEND_URL}/api/travel-expenses/:path*`,
-      },
-      {
-        source: "/api/bills/:path*",
-        destination: `${BACKEND_URL}/api/bills/:path*`,
-      },
-      {
-        source: "/api/garages/:path*",
-        destination: `${BACKEND_URL}/api/garages/:path*`,
-      },
-      {
-        source: "/api/car-repairs/:path*",
-        destination: `${BACKEND_URL}/api/car-repairs/:path*`,
-      },
+      ...proxy("auth"),
+      ...proxy("vehicles"),
+      ...proxy("car-expenses"),
+      ...proxy("travel-expenses"),
+      ...proxy("bills"),
+      ...proxy("garages"),
+      ...proxy("car-repairs"),
     ];
   },
 };

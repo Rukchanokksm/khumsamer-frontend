@@ -10,9 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Wrench, Receipt, MapPin, CalendarDays, History,
-} from "lucide-react";
+import { Wrench, Receipt, MapPin, CalendarDays, History } from "lucide-react";
 import { GasPriceWidget } from "@/components/car-service/GasPriceWidget";
 import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/ExpenseForm";
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
@@ -55,7 +53,6 @@ function formatMonth(ym: string) {
   });
 }
 
-// ---- Monthly filter + summary row ----
 interface MonthFilterProps {
   month: string;
   onChange: (m: string) => void;
@@ -79,9 +76,7 @@ function MonthFilter({ month, onChange, options, count, summary, categoryLabels,
             <SelectContent>
               <SelectItem value="all">ทั้งหมด</SelectItem>
               {options.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {formatMonth(m)}
-                </SelectItem>
+                <SelectItem key={m} value={m}>{formatMonth(m)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -93,15 +88,10 @@ function MonthFilter({ month, onChange, options, count, summary, categoryLabels,
           </span>
         )}
       </div>
-
-      {/* category breakdown */}
       {summary && summary.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {summary.map(([cat, amt]) => (
-            <div
-              key={cat}
-              className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1 text-xs"
-            >
+            <div key={cat} className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1 text-xs">
               <span className="text-muted-foreground">{categoryLabels[cat] ?? cat}</span>
               <span className="font-semibold">฿{formatTHB(amt)}</span>
             </div>
@@ -112,14 +102,47 @@ function MonthFilter({ month, onChange, options, count, summary, categoryLabels,
   );
 }
 
-// ---- Page ----
-export default function CarHistoryPage() {
-  const carExpenses = useCarExpenses();
-  const travelExpenses = useTravelExpenses();
-  const repairs = useCarRepairs();
+// ---- Tab components (แยก hook ต่อ tab เพื่อ mount เฉพาะเมื่อ active) ----
 
-  // Monthly filter — car expenses
+function ServiceTab() {
+  const repairs = useCarRepairs();
+  return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Wrench className="h-5 w-5 text-orange-500" />
+            ประวัติการซ่อมบำรุง
+          </CardTitle>
+          <CarRepairForm
+            onAdd={async (input, receiptFile) => {
+              const repair = await repairs.addRepair(input);
+              if (receiptFile) repairs.uploadReceipt(repair.id, receiptFile);
+              return repair;
+            }}
+            isLoading={repairs.isCreating}
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <CarRepairList
+          repairs={repairs.repairs}
+          isLoading={repairs.isLoading}
+          onUpdate={repairs.updateRepair}
+          onRemove={repairs.removeRepair}
+          onUpload={repairs.uploadReceipt}
+          onRemoveReceipt={repairs.removeReceipt}
+          uploadingId={repairs.uploadingId}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExpensesTab() {
+  const carExpenses = useCarExpenses();
   const [carMonth, setCarMonth] = useState(CURRENT_MONTH);
+
   const carMonthOptions = useMemo(() => {
     const s = new Set([CURRENT_MONTH]);
     carExpenses.expenses.forEach((e) => s.add(e.date.slice(0, 7)));
@@ -127,16 +150,10 @@ export default function CarHistoryPage() {
   }, [carExpenses.expenses]);
 
   const filteredCar = useMemo(
-    () =>
-      carMonth === "all"
-        ? carExpenses.expenses
-        : carExpenses.expenses.filter((e) => e.date.startsWith(carMonth)),
+    () => carMonth === "all" ? carExpenses.expenses : carExpenses.expenses.filter((e) => e.date.startsWith(carMonth)),
     [carExpenses.expenses, carMonth],
   );
-  const filteredCarTotal = useMemo(
-    () => filteredCar.reduce((s, e) => s + e.amount, 0),
-    [filteredCar],
-  );
+  const filteredCarTotal = useMemo(() => filteredCar.reduce((s, e) => s + e.amount, 0), [filteredCar]);
   const carSummary = useMemo<[string, number][] | null>(() => {
     if (carMonth === "all") return null;
     const s: Record<string, number> = {};
@@ -144,8 +161,42 @@ export default function CarHistoryPage() {
     return Object.entries(s).sort(([, a], [, b]) => b - a);
   }, [filteredCar, carMonth]);
 
-  // Monthly filter — travel expenses
+  return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Receipt className="h-5 w-5 text-blue-500" />
+            ค่าใช้จ่ายรถ
+          </CardTitle>
+          <CarExpenseForm onAdd={carExpenses.addExpense} />
+        </div>
+        <MonthFilter
+          month={carMonth}
+          onChange={setCarMonth}
+          options={carMonthOptions}
+          count={filteredCar.length}
+          summary={carSummary}
+          categoryLabels={CAR_CATEGORY_LABELS}
+          total={filteredCarTotal}
+        />
+      </CardHeader>
+      <CardContent>
+        <CarExpenseList
+          expenses={filteredCar}
+          totalAmount={filteredCarTotal}
+          onRemove={carExpenses.removeExpense}
+          isLoading={carExpenses.isLoading}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function TravelTab() {
+  const travelExpenses = useTravelExpenses();
   const [travelMonth, setTravelMonth] = useState(CURRENT_MONTH);
+
   const travelMonthOptions = useMemo(() => {
     const s = new Set([CURRENT_MONTH]);
     travelExpenses.expenses.forEach((e) => s.add(e.date.slice(0, 7)));
@@ -153,16 +204,10 @@ export default function CarHistoryPage() {
   }, [travelExpenses.expenses]);
 
   const filteredTravel = useMemo(
-    () =>
-      travelMonth === "all"
-        ? travelExpenses.expenses
-        : travelExpenses.expenses.filter((e) => e.date.startsWith(travelMonth)),
+    () => travelMonth === "all" ? travelExpenses.expenses : travelExpenses.expenses.filter((e) => e.date.startsWith(travelMonth)),
     [travelExpenses.expenses, travelMonth],
   );
-  const filteredTravelTotal = useMemo(
-    () => filteredTravel.reduce((s, e) => s + e.amount, 0),
-    [filteredTravel],
-  );
+  const filteredTravelTotal = useMemo(() => filteredTravel.reduce((s, e) => s + e.amount, 0), [filteredTravel]);
   const travelSummary = useMemo<[string, number][] | null>(() => {
     if (travelMonth === "all") return null;
     const s: Record<string, number> = {};
@@ -171,8 +216,50 @@ export default function CarHistoryPage() {
   }, [filteredTravel, travelMonth]);
 
   return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <MapPin className="h-5 w-5 text-green-500" />
+            ค่าเดินทาง
+          </CardTitle>
+          <TravelExpenseForm onAdd={travelExpenses.addExpense} />
+        </div>
+        <MonthFilter
+          month={travelMonth}
+          onChange={setTravelMonth}
+          options={travelMonthOptions}
+          count={filteredTravel.length}
+          summary={travelSummary}
+          categoryLabels={TRAVEL_CATEGORY_LABELS}
+          total={filteredTravelTotal}
+        />
+      </CardHeader>
+      <CardContent>
+        <TravelExpenseList
+          expenses={filteredTravel}
+          totalAmount={filteredTravelTotal}
+          onRemove={travelExpenses.removeExpense}
+          isLoading={travelExpenses.isLoading}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---- Page ----
+export default function CarHistoryPage() {
+  const [activeTab, setActiveTab] = useState("expenses");
+  // เก็บว่า tab ไหนถูกเปิดแล้วบ้าง เพื่อ mount เพียงครั้งเดียว (ไม่ unmount เมื่อสลับ tab)
+  const [mounted, setMounted] = useState(() => new Set(["expenses"]));
+
+  function handleTabChange(val: string) {
+    setActiveTab(val);
+    setMounted((prev) => { const next = new Set(prev); next.add(val); return next; });
+  }
+
+  return (
     <main className="container mx-auto px-4 py-8 space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <BackButton />
@@ -185,11 +272,9 @@ export default function CarHistoryPage() {
         <ThemeToggle />
       </div>
 
-      {/* Gas Price Widget */}
       <GasPriceWidget />
 
-      {/* Tabs */}
-      <Tabs defaultValue="expenses">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="service" className="gap-1.5">
             <Wrench className="h-4 w-4" />
@@ -208,101 +293,14 @@ export default function CarHistoryPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ---- Service History ---- */}
         <TabsContent value="service" className="mt-4">
-          <Card>
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Wrench className="h-5 w-5 text-orange-500" />
-                  ประวัติการซ่อมบำรุง
-                </CardTitle>
-                <CarRepairForm
-                  onAdd={async (input, receiptFile) => {
-                    const repair = await repairs.addRepair(input);
-                    if (receiptFile) repairs.uploadReceipt(repair.id, receiptFile);
-                    return repair;
-                  }}
-                  isLoading={repairs.isCreating}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CarRepairList
-                repairs={repairs.repairs}
-                isLoading={repairs.isLoading}
-                onUpdate={repairs.updateRepair}
-                onRemove={repairs.removeRepair}
-                onUpload={repairs.uploadReceipt}
-                onRemoveReceipt={repairs.removeReceipt}
-                uploadingId={repairs.uploadingId}
-              />
-            </CardContent>
-          </Card>
+          {mounted.has("service") && <ServiceTab />}
         </TabsContent>
-
-        {/* ---- Car Expenses ---- */}
         <TabsContent value="expenses" className="mt-4">
-          <Card>
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Receipt className="h-5 w-5 text-blue-500" />
-                  ค่าใช้จ่ายรถ
-                </CardTitle>
-                <CarExpenseForm onAdd={carExpenses.addExpense} />
-              </div>
-              <MonthFilter
-                month={carMonth}
-                onChange={setCarMonth}
-                options={carMonthOptions}
-                count={filteredCar.length}
-                summary={carSummary}
-                categoryLabels={CAR_CATEGORY_LABELS}
-                total={filteredCarTotal}
-              />
-            </CardHeader>
-            <CardContent>
-              <CarExpenseList
-                expenses={filteredCar}
-                totalAmount={filteredCarTotal}
-                onRemove={carExpenses.removeExpense}
-                isLoading={carExpenses.isLoading}
-              />
-            </CardContent>
-          </Card>
+          {mounted.has("expenses") && <ExpensesTab />}
         </TabsContent>
-
-        {/* ---- Travel Expenses ---- */}
         <TabsContent value="travel" className="mt-4">
-          <Card>
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MapPin className="h-5 w-5 text-green-500" />
-                  ค่าเดินทาง
-                </CardTitle>
-                <TravelExpenseForm onAdd={travelExpenses.addExpense} />
-              </div>
-              <MonthFilter
-                month={travelMonth}
-                onChange={setTravelMonth}
-                options={travelMonthOptions}
-                count={filteredTravel.length}
-                summary={travelSummary}
-                categoryLabels={TRAVEL_CATEGORY_LABELS}
-                total={filteredTravelTotal}
-              />
-            </CardHeader>
-            <CardContent>
-              <TravelExpenseList
-                expenses={filteredTravel}
-                totalAmount={filteredTravelTotal}
-                onRemove={travelExpenses.removeExpense}
-                isLoading={travelExpenses.isLoading}
-              />
-            </CardContent>
-          </Card>
+          {mounted.has("travel") && <TravelTab />}
         </TabsContent>
       </Tabs>
     </main>
