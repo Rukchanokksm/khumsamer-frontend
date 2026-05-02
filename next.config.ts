@@ -4,6 +4,7 @@ import path from "path";
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4000";
 
 const nextConfig: NextConfig = {
+  trailingSlash: false,
   turbopack: {
     root: path.resolve(__dirname),
   },
