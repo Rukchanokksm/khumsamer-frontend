@@ -6,7 +6,9 @@ import type {
     CarExpense,
     TravelExpense,
     CreateCarExpenseInput,
+    UpdateCarExpenseInput,
     CreateTravelExpenseInput,
+    UpdateTravelExpenseInput,
 } from "@/types/car-service"
 
 const CAR_KEY = ["car-expenses"] as const
@@ -22,6 +24,14 @@ async function createCarExpense(
 ): Promise<CarExpense> {
     const data = await apiJson<{ expense: CarExpense }>("/api/car-expenses", {
         method: "POST",
+        body: JSON.stringify(input),
+    })
+    return data.expense
+}
+
+async function updateCarExpense(id: string, input: UpdateCarExpenseInput): Promise<CarExpense> {
+    const data = await apiJson<{ expense: CarExpense }>(`/api/car-expenses/${id}`, {
+        method: "PATCH",
         body: JSON.stringify(input),
     })
     return data.expense
@@ -48,6 +58,14 @@ async function createTravelExpense(
     return data.expense
 }
 
+async function updateTravelExpense(id: string, input: UpdateTravelExpenseInput): Promise<TravelExpense> {
+    const data = await apiJson<{ expense: TravelExpense }>(`/api/travel-expenses/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+    })
+    return data.expense
+}
+
 async function deleteTravelExpense(id: string): Promise<void> {
     await apiJson(`/api/travel-expenses/${id}`, { method: "DELETE" })
 }
@@ -65,6 +83,12 @@ export function useCarExpenses() {
         onSuccess: () => qc.invalidateQueries({ queryKey: CAR_KEY }),
     })
 
+    const updateMutation = useMutation({
+        mutationFn: ({ id, input }: { id: string; input: UpdateCarExpenseInput }) =>
+            updateCarExpense(id, input),
+        onSuccess: () => qc.invalidateQueries({ queryKey: CAR_KEY }),
+    })
+
     const deleteMutation = useMutation({
         mutationFn: deleteCarExpense,
         onSuccess: () => qc.invalidateQueries({ queryKey: CAR_KEY }),
@@ -78,9 +102,11 @@ export function useCarExpenses() {
         totalAmount,
         isLoading: query.isLoading,
         isError: query.isError,
-        addExpense: (input: CreateCarExpenseInput) =>
-            createMutation.mutate(input),
+        addExpense: (input: CreateCarExpenseInput) => createMutation.mutate(input),
+        updateExpense: (id: string, input: UpdateCarExpenseInput) =>
+            updateMutation.mutateAsync({ id, input }),
         removeExpense: (id: string) => deleteMutation.mutate(id),
+        isUpdating: updateMutation.isPending,
     }
 }
 
@@ -97,6 +123,12 @@ export function useTravelExpenses() {
         onSuccess: () => qc.invalidateQueries({ queryKey: TRAVEL_KEY }),
     })
 
+    const updateMutation = useMutation({
+        mutationFn: ({ id, input }: { id: string; input: UpdateTravelExpenseInput }) =>
+            updateTravelExpense(id, input),
+        onSuccess: () => qc.invalidateQueries({ queryKey: TRAVEL_KEY }),
+    })
+
     const deleteMutation = useMutation({
         mutationFn: deleteTravelExpense,
         onSuccess: () => qc.invalidateQueries({ queryKey: TRAVEL_KEY }),
@@ -110,8 +142,10 @@ export function useTravelExpenses() {
         totalAmount,
         isLoading: query.isLoading,
         isError: query.isError,
-        addExpense: (input: CreateTravelExpenseInput) =>
-            createMutation.mutate(input),
+        addExpense: (input: CreateTravelExpenseInput) => createMutation.mutate(input),
+        updateExpense: (id: string, input: UpdateTravelExpenseInput) =>
+            updateMutation.mutateAsync({ id, input }),
         removeExpense: (id: string) => deleteMutation.mutate(id),
+        isUpdating: updateMutation.isPending,
     }
 }

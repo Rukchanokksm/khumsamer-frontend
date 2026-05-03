@@ -80,7 +80,9 @@ export interface TravelExpense {
 }
 
 export type CreateCarExpenseInput = Omit<CarExpense, "id" | "createdAt" | "updatedAt">;
+export type UpdateCarExpenseInput = Partial<CreateCarExpenseInput>;
 export type CreateTravelExpenseInput = Omit<TravelExpense, "id" | "createdAt" | "updatedAt">;
+export type UpdateTravelExpenseInput = Partial<CreateTravelExpenseInput>;
 
 // ---- Vehicles ----
 export type VehicleType = "sedan" | "pickup" | "ppv" | "suv" | "hatchback" | "other";

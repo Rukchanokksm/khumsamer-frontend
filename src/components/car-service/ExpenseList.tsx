@@ -11,7 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Trash2 } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import type { CarExpense, TravelExpense } from "@/types/car-service"
 
 function TableSkeleton({ cols, rows = 4 }: { cols: number; rows?: number }) {
@@ -100,27 +100,23 @@ const CATEGORY_COLORS: Record<string, string> = {
 interface CarExpenseListProps {
     expenses: CarExpense[]
     totalAmount: number
-    onRemove: (id: string) => void
+    onDetail: (expense: CarExpense) => void
     isLoading?: boolean
 }
 
 export function CarExpenseList({
     expenses,
     totalAmount,
-    onRemove,
+    onDetail,
     isLoading,
 }: CarExpenseListProps) {
-    if (isLoading) {
-        return <TableSkeleton cols={7} />
-    }
+    if (isLoading) return <TableSkeleton cols={5} />
 
     if (expenses.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
                 <p>ยังไม่มีรายการค่าใช้จ่าย</p>
-                <p className="text-sm mt-1">
-                    กดปุ่ม &quot;เพิ่มรายจ่าย&quot; เพื่อเริ่มบันทึก
-                </p>
+                <p className="text-sm mt-1">กดปุ่ม &quot;เพิ่มรายจ่าย&quot; เพื่อเริ่มบันทึก</p>
             </div>
         )
     }
@@ -134,64 +130,36 @@ export function CarExpenseList({
                             <TableHead>วันที่</TableHead>
                             <TableHead>รถ</TableHead>
                             <TableHead>ประเภท</TableHead>
-                            <TableHead>รายละเอียด</TableHead>
-                            <TableHead>ลิตร</TableHead>
-                            <TableHead className="text-right">
-                                จำนวนเงิน
-                            </TableHead>
-                            <TableHead className="w-10" />
+                            <TableHead className="max-w-[160px]">รายละเอียด</TableHead>
+                            <TableHead className="text-right">จำนวนเงิน</TableHead>
+                            <TableHead className="w-8" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {expenses.map((expense) => (
-                            <TableRow key={expense.id}>
+                            <TableRow key={expense.id} className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => onDetail(expense)}>
                                 <TableCell className="whitespace-nowrap text-sm">
                                     {formatDate(expense.date)}
                                 </TableCell>
                                 <TableCell>
-                                    <div className="text-sm font-medium">
-                                        {expense.carName}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {expense.licensePlate}
-                                    </div>
+                                    <div className="text-sm font-medium">{expense.carName}</div>
+                                    <div className="text-xs text-muted-foreground">{expense.licensePlate}</div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge
-                                        variant="secondary"
-                                        className={`text-xs ${CATEGORY_COLORS[expense.category] ?? ""}`}
-                                    >
-                                        {CAR_CATEGORY_LABELS[
-                                            expense.category
-                                        ] ?? expense.category}
+                                    <Badge variant="secondary"
+                                        className={`text-xs ${CATEGORY_COLORS[expense.category] ?? ""}`}>
+                                        {CAR_CATEGORY_LABELS[expense.category] ?? expense.category}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-sm max-w-[180px] truncate">
+                                <TableCell className="text-sm max-w-[160px] truncate text-muted-foreground">
                                     {expense.description}
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                    {expense.liters
-                                        ? `${expense.liters} ล.`
-                                        : "-"}
-                                    {expense.pricePerLiter ? (
-                                        <div className="text-xs">
-                                            ฿{formatTHB(expense.pricePerLiter)}
-                                            /ล.
-                                        </div>
-                                    ) : null}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-sm">
                                     ฿{formatTHB(expense.amount)}
                                 </TableCell>
                                 <TableCell>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                        onClick={() => onRemove(expense.id)}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -201,9 +169,7 @@ export function CarExpenseList({
             <div className="flex justify-end mt-3 px-1">
                 <p className="text-sm font-semibold">
                     รวมทั้งหมด:{" "}
-                    <span className="text-primary text-base">
-                        ฿{formatTHB(totalAmount)}
-                    </span>
+                    <span className="text-primary text-base">฿{formatTHB(totalAmount)}</span>
                 </p>
             </div>
         </div>
@@ -214,27 +180,23 @@ export function CarExpenseList({
 interface TravelExpenseListProps {
     expenses: TravelExpense[]
     totalAmount: number
-    onRemove: (id: string) => void
+    onDetail: (expense: TravelExpense) => void
     isLoading?: boolean
 }
 
 export function TravelExpenseList({
     expenses,
     totalAmount,
-    onRemove,
+    onDetail,
     isLoading,
 }: TravelExpenseListProps) {
-    if (isLoading) {
-        return <TableSkeleton cols={8} />
-    }
+    if (isLoading) return <TableSkeleton cols={5} />
 
     if (expenses.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
                 <p>ยังไม่มีรายการค่าเดินทาง</p>
-                <p className="text-sm mt-1">
-                    กดปุ่ม &quot;เพิ่มค่าเดินทาง&quot; เพื่อเริ่มบันทึก
-                </p>
+                <p className="text-sm mt-1">กดปุ่ม &quot;เพิ่มค่าเดินทาง&quot; เพื่อเริ่มบันทึก</p>
             </div>
         )
     }
@@ -246,64 +208,38 @@ export function TravelExpenseList({
                     <TableHeader>
                         <TableRow>
                             <TableHead>วันที่</TableHead>
-                            <TableHead>ทริป</TableHead>
-                            <TableHead>รถ</TableHead>
+                            <TableHead>ทริป / รถ</TableHead>
                             <TableHead>ประเภท</TableHead>
-                            <TableHead>รายละเอียด</TableHead>
-                            <TableHead>ระยะทาง</TableHead>
-                            <TableHead className="text-right">
-                                จำนวนเงิน
-                            </TableHead>
-                            <TableHead className="w-10" />
+                            <TableHead className="max-w-[140px]">รายละเอียด</TableHead>
+                            <TableHead className="text-right">จำนวนเงิน</TableHead>
+                            <TableHead className="w-8" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {expenses.map((expense) => (
-                            <TableRow key={expense.id}>
+                            <TableRow key={expense.id} className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => onDetail(expense)}>
                                 <TableCell className="whitespace-nowrap text-sm">
                                     {formatDate(expense.date)}
                                 </TableCell>
-                                <TableCell className="text-sm font-medium max-w-[120px] truncate">
-                                    {expense.tripName}
+                                <TableCell>
+                                    <div className="text-sm font-medium max-w-[120px] truncate">{expense.tripName}</div>
+                                    <div className="text-xs text-muted-foreground">{expense.carName}</div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="text-sm">
-                                        {expense.carName}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {expense.licensePlate}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant="secondary"
-                                        className={`text-xs ${CATEGORY_COLORS[expense.category] ?? ""}`}
-                                    >
-                                        {TRAVEL_CATEGORY_LABELS[
-                                            expense.category
-                                        ] ?? expense.category}
+                                    <Badge variant="secondary"
+                                        className={`text-xs ${CATEGORY_COLORS[expense.category] ?? ""}`}>
+                                        {TRAVEL_CATEGORY_LABELS[expense.category] ?? expense.category}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-sm max-w-[160px] truncate">
+                                <TableCell className="text-sm max-w-[140px] truncate text-muted-foreground">
                                     {expense.description}
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                    {expense.distance
-                                        ? `${expense.distance} กม.`
-                                        : "-"}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-sm">
                                     ฿{formatTHB(expense.amount)}
                                 </TableCell>
                                 <TableCell>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                        onClick={() => onRemove(expense.id)}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -313,9 +249,7 @@ export function TravelExpenseList({
             <div className="flex justify-end mt-3 px-1">
                 <p className="text-sm font-semibold">
                     รวมค่าเดินทางทั้งหมด:{" "}
-                    <span className="text-primary text-base">
-                        ฿{formatTHB(totalAmount)}
-                    </span>
+                    <span className="text-primary text-base">฿{formatTHB(totalAmount)}</span>
                 </p>
             </div>
         </div>

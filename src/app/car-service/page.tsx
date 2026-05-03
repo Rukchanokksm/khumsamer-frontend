@@ -14,6 +14,8 @@ import { Wrench, Receipt, MapPin, CalendarDays, History } from "lucide-react";
 import { GasPriceWidget } from "@/components/car-service/GasPriceWidget";
 import { CarExpenseForm, TravelExpenseForm } from "@/components/car-service/ExpenseForm";
 import { CarExpenseList, TravelExpenseList } from "@/components/car-service/ExpenseList";
+import { CarExpenseDetailSheet, TravelExpenseDetailSheet } from "@/components/car-service/ExpenseDetailSheet";
+import type { CarExpense, TravelExpense } from "@/types/car-service";
 import { CarRepairForm } from "@/components/car-service/CarRepairForm";
 import { CarRepairList } from "@/components/car-service/CarRepairList";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
@@ -142,6 +144,7 @@ function ServiceTab() {
 function ExpensesTab() {
   const carExpenses = useCarExpenses();
   const [carMonth, setCarMonth] = useState(CURRENT_MONTH);
+  const [detailExpense, setDetailExpense] = useState<CarExpense | null>(null);
 
   const carMonthOptions = useMemo(() => {
     const s = new Set([CURRENT_MONTH]);
@@ -185,10 +188,18 @@ function ExpensesTab() {
         <CarExpenseList
           expenses={filteredCar}
           totalAmount={filteredCarTotal}
-          onRemove={carExpenses.removeExpense}
+          onDetail={setDetailExpense}
           isLoading={carExpenses.isLoading}
         />
       </CardContent>
+      <CarExpenseDetailSheet
+        expense={detailExpense}
+        open={!!detailExpense}
+        onOpenChange={(v) => { if (!v) setDetailExpense(null); }}
+        onUpdate={carExpenses.updateExpense}
+        onRemove={carExpenses.removeExpense}
+        isUpdating={carExpenses.isUpdating}
+      />
     </Card>
   );
 }
@@ -196,6 +207,7 @@ function ExpensesTab() {
 function TravelTab() {
   const travelExpenses = useTravelExpenses();
   const [travelMonth, setTravelMonth] = useState(CURRENT_MONTH);
+  const [detailExpense, setDetailExpense] = useState<TravelExpense | null>(null);
 
   const travelMonthOptions = useMemo(() => {
     const s = new Set([CURRENT_MONTH]);
@@ -239,10 +251,18 @@ function TravelTab() {
         <TravelExpenseList
           expenses={filteredTravel}
           totalAmount={filteredTravelTotal}
-          onRemove={travelExpenses.removeExpense}
+          onDetail={setDetailExpense}
           isLoading={travelExpenses.isLoading}
         />
       </CardContent>
+      <TravelExpenseDetailSheet
+        expense={detailExpense}
+        open={!!detailExpense}
+        onOpenChange={(v) => { if (!v) setDetailExpense(null); }}
+        onUpdate={travelExpenses.updateExpense}
+        onRemove={travelExpenses.removeExpense}
+        isUpdating={travelExpenses.isUpdating}
+      />
     </Card>
   );
 }

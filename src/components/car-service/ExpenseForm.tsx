@@ -28,6 +28,7 @@ import type {
 } from "@/types/car-service"
 import { VehicleSelector } from "@/components/car-service/VehicleSelector"
 import { CarWashPlaceSelector } from "@/components/car-service/CarWashPlaceSelector"
+import { TollPlazaSelector } from "@/components/car-service/TollPlazaSelector"
 
 // ---- Car Expense Form ----
 const CAR_EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
@@ -58,6 +59,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
     const [open, setOpen] = useState(false)
     const [selectedVehicleId, setSelectedVehicleId] = useState("")
     const [selectedWashPlaceId, setSelectedWashPlaceId] = useState("")
+    const [selectedTollPlazaId, setSelectedTollPlazaId] = useState("")
     const [form, setForm] = useState<Partial<CreateCarExpenseInput>>({
         date: new Date().toISOString().split("T")[0],
         category: "fuel",
@@ -77,6 +79,7 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
             description: "",
         }))
         if (v !== "wash") setSelectedWashPlaceId("")
+        if (v !== "toll") setSelectedTollPlazaId("")
     }
 
     function handleAmountChange(val: string) {
@@ -129,11 +132,13 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
         setOpen(false)
         setSelectedVehicleId("")
         setSelectedWashPlaceId("")
+        setSelectedTollPlazaId("")
         setForm({ date: new Date().toISOString().split("T")[0], category: "fuel" })
     }
 
     const isFuel = form.category === "fuel"
     const isWash = form.category === "wash"
+    const isToll = form.category === "toll"
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -230,6 +235,17 @@ export function CarExpenseForm({ onAdd }: CarExpenseFormProps) {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                    ) : isToll ? (
+                        <div className="space-y-1">
+                            <Label>ด่านทางด่วน *</Label>
+                            <TollPlazaSelector
+                                value={selectedTollPlazaId}
+                                onChange={(id, description) => {
+                                    setSelectedTollPlazaId(id)
+                                    set("description", description as CreateCarExpenseInput["description"])
+                                }}
+                            />
                         </div>
                     ) : isWash ? (
                         <div className="space-y-1">
