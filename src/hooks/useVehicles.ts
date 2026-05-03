@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiJson } from "@/lib/api";
-import type { Vehicle, CreateVehicleInput } from "@/types/car-service";
+import type { Vehicle, CreateVehicleInput, UpdateVehicleInput } from "@/types/car-service";
 
 const VEHICLES_KEY = ["vehicles"] as const;
 
@@ -14,6 +14,14 @@ async function fetchVehicles(): Promise<Vehicle[]> {
 async function createVehicle(input: CreateVehicleInput): Promise<Vehicle> {
   const data = await apiJson<{ vehicle: Vehicle }>("/api/vehicles", {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+  return data.vehicle;
+}
+
+async function updateVehicle(id: string, input: UpdateVehicleInput): Promise<Vehicle> {
+  const data = await apiJson<{ vehicle: Vehicle }>(`/api/vehicles/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
   return data.vehicle;
@@ -36,6 +44,12 @@ export function useVehicles() {
     onSuccess: () => qc.invalidateQueries({ queryKey: VEHICLES_KEY }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateVehicleInput }) =>
+      updateVehicle(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICLES_KEY }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteVehicle,
     onSuccess: () => qc.invalidateQueries({ queryKey: VEHICLES_KEY }),
@@ -46,7 +60,10 @@ export function useVehicles() {
     isLoading: query.isLoading,
     isError: query.isError,
     addVehicle: (input: CreateVehicleInput) => createMutation.mutateAsync(input),
+    updateVehicle: (id: string, input: UpdateVehicleInput) =>
+      updateMutation.mutateAsync({ id, input }),
     removeVehicle: (id: string) => deleteMutation.mutate(id),
     isAdding: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
   };
 }

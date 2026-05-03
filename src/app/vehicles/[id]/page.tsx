@@ -1,13 +1,29 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useCarExpenses, useTravelExpenses } from "@/hooks/useCarExpenses";
+import { useCarRepairs } from "@/hooks/useCarRepairs";
 import {
   ArrowLeft,
   Car,
@@ -15,8 +31,14 @@ import {
   Receipt,
   MapPin,
   Loader2,
+  Pencil,
 } from "lucide-react";
-import type { VehicleType, VehicleCondition } from "@/types/car-service";
+import type {
+  VehicleType,
+  VehicleCondition,
+  UpdateVehicleInput,
+  Vehicle,
+} from "@/types/car-service";
 
 const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
   sedan: "เก๋ง",
@@ -26,21 +48,173 @@ const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
   hatchback: "Hatchback",
   other: "อื่นๆ",
 };
+const VEHICLE_TYPES = Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[];
 
 const CONDITION_LABELS: Record<VehicleCondition, string> = {
   new: "มือ 1",
   used: "มือ 2",
 };
 
+// ---- Edit Dialog ----
+interface EditVehicleDialogProps {
+  vehicle: Vehicle;
+  open: boolean;
+  onClose: () => void;
+  onSave: (id: string, input: UpdateVehicleInput) => Promise<unknown>;
+  isSaving: boolean;
+}
+
+function EditVehicleDialog({ vehicle, open, onClose, onSave, isSaving }: EditVehicleDialogProps) {
+  const [form, setForm] = useState<UpdateVehicleInput>({
+    brand: vehicle.brand,
+    model: vehicle.model,
+    licensePlate: vehicle.licensePlate,
+    type: vehicle.type ?? undefined,
+    color: vehicle.color ?? "",
+    condition: vehicle.condition ?? undefined,
+    purchaseDate: vehicle.purchaseDate ?? undefined,
+  });
+
+  function set<K extends keyof UpdateVehicleInput>(k: K, v: UpdateVehicleInput[K]) {
+    setForm((prev) => ({ ...prev, [k]: v }));
+  }
+
+  const purchaseDateStr = form.purchaseDate
+    ? new Date(form.purchaseDate * 1000).toISOString().slice(0, 10)
+    : "";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await onSave(vehicle.id, {
+      ...form,
+      color: form.color || undefined,
+      purchaseDate: form.purchaseDate || undefined,
+    });
+    onClose();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!isSaving && !v) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-4 w-4 text-blue-500" />
+            แก้ไขข้อมูลรถ
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>ยี่ห้อ *</Label>
+              <Input
+                value={form.brand ?? ""}
+                onChange={(e) => set("brand", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>รุ่น *</Label>
+              <Input
+                value={form.model ?? ""}
+                onChange={(e) => set("model", e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>เลขทะเบียน *</Label>
+            <Input
+              value={form.licensePlate ?? ""}
+              onChange={(e) => set("licensePlate", e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>ประเภทรถ</Label>
+              <Select
+                value={form.type ?? "none"}
+                onValueChange={(v) => set("type", v === "none" ? undefined : (v as VehicleType))}
+              >
+                <SelectTrigger><SelectValue placeholder="เลือกประเภท" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  {VEHICLE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{VEHICLE_TYPE_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>ประวัติรถ</Label>
+              <Select
+                value={form.condition ?? "none"}
+                onValueChange={(v) => set("condition", v === "none" ? undefined : (v as VehicleCondition))}
+              >
+                <SelectTrigger><SelectValue placeholder="เลือก" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  <SelectItem value="new">มือ 1</SelectItem>
+                  <SelectItem value="used">มือ 2</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>สีรถ</Label>
+            <Input
+              value={form.color ?? ""}
+              onChange={(e) => set("color", e.target.value)}
+              placeholder="เช่น ขาว, ดำ, เทา"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label>วันที่ซื้อ</Label>
+            <Input
+              type="date"
+              value={purchaseDateStr}
+              onChange={(e) => {
+                const ts = e.target.value ? Math.floor(new Date(e.target.value).getTime() / 1000) : undefined;
+                set("purchaseDate", ts);
+              }}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" disabled={isSaving} onClick={onClose}>
+              ยกเลิก
+            </Button>
+            <Button type="submit" disabled={isSaving} className="gap-1.5">
+              {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              บันทึก
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function formatTHB(n: number) {
+  return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ---- Page ----
 export default function VehicleDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { vehicles, isLoading } = useVehicles();
+  const { vehicles, isLoading, updateVehicle, isUpdating } = useVehicles();
   const { expenses: carExpenses } = useCarExpenses();
   const { expenses: travelExpenses } = useTravelExpenses();
+  const { repairs } = useCarRepairs();
+  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -72,11 +246,12 @@ export default function VehicleDetailPage({
   const vehicleTravelExpenses = travelExpenses.filter(
     (e) => e.licensePlate === vehicle.licensePlate,
   );
-  const totalCarExpense = vehicleCarExpenses.reduce((s, e) => s + e.amount, 0);
-  const totalTravelExpense = vehicleTravelExpenses.reduce(
-    (s, e) => s + e.amount,
-    0,
+  const vehicleRepairs = repairs.filter(
+    (r) => r.licensePlate === vehicle.licensePlate,
   );
+  const totalCarExpense = vehicleCarExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalTravelExpense = vehicleTravelExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalRepairCost = vehicleRepairs.reduce((s, r) => s + r.cost, 0);
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-2xl space-y-5">
@@ -101,9 +276,19 @@ export default function VehicleDetailPage({
       {/* Vehicle Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Car className="h-4 w-4" /> ข้อมูลรถ
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Car className="h-4 w-4" /> ข้อมูลรถ
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-blue-600"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" /> แก้ไข
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -123,9 +308,7 @@ export default function VehicleDetailPage({
               <div>
                 <dt className="text-muted-foreground text-xs mb-0.5">ประเภทรถ</dt>
                 <dd>
-                  <Badge variant="secondary">
-                    {VEHICLE_TYPE_LABELS[vehicle.type]}
-                  </Badge>
+                  <Badge variant="secondary">{VEHICLE_TYPE_LABELS[vehicle.type]}</Badge>
                 </dd>
               </div>
             )}
@@ -139,9 +322,7 @@ export default function VehicleDetailPage({
               <div>
                 <dt className="text-muted-foreground text-xs mb-0.5">ประวัติรถ</dt>
                 <dd>
-                  <Badge variant="outline">
-                    {CONDITION_LABELS[vehicle.condition]}
-                  </Badge>
+                  <Badge variant="outline">{CONDITION_LABELS[vehicle.condition]}</Badge>
                 </dd>
               </div>
             )}
@@ -149,10 +330,11 @@ export default function VehicleDetailPage({
               <div className="col-span-2">
                 <dt className="text-muted-foreground text-xs mb-0.5">วันที่ซื้อ</dt>
                 <dd className="font-medium">
-                  {new Date(vehicle.purchaseDate * 1000).toLocaleDateString(
-                    "th-TH",
-                    { year: "numeric", month: "long", day: "numeric" },
-                  )}
+                  {new Date(vehicle.purchaseDate * 1000).toLocaleDateString("th-TH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </dd>
               </div>
             )}
@@ -160,20 +342,27 @@ export default function VehicleDetailPage({
         </CardContent>
       </Card>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Wrench className="h-4 w-4 text-orange-500" />
+              <p className="text-xs text-muted-foreground">ค่าซ่อมบำรุงรวม</p>
+            </div>
+            <p className="text-xl font-bold">฿{formatTHB(totalRepairCost)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {vehicleRepairs.length} รายการ
+            </p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <Receipt className="h-4 w-4 text-blue-500" />
               <p className="text-xs text-muted-foreground">ค่าใช้จ่ายรถรวม</p>
             </div>
-            <p className="text-xl font-bold">
-              ฿
-              {totalCarExpense.toLocaleString("th-TH", {
-                minimumFractionDigits: 2,
-              })}
-            </p>
+            <p className="text-xl font-bold">฿{formatTHB(totalCarExpense)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {vehicleCarExpenses.length} รายการ
             </p>
@@ -185,12 +374,7 @@ export default function VehicleDetailPage({
               <MapPin className="h-4 w-4 text-green-500" />
               <p className="text-xs text-muted-foreground">ค่าเดินทางรวม</p>
             </div>
-            <p className="text-xl font-bold">
-              ฿
-              {totalTravelExpense.toLocaleString("th-TH", {
-                minimumFractionDigits: 2,
-              })}
-            </p>
+            <p className="text-xl font-bold">฿{formatTHB(totalTravelExpense)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {vehicleTravelExpenses.length} รายการ
             </p>
@@ -212,9 +396,7 @@ export default function VehicleDetailPage({
               </p>
             </div>
             <Link href="/car-service">
-              <Button variant="outline" size="sm">
-                ดูประวัติ
-              </Button>
+              <Button variant="outline" size="sm">ดูประวัติ</Button>
             </Link>
           </div>
         </CardContent>
@@ -230,19 +412,14 @@ export default function VehicleDetailPage({
                 ค่าใช้จ่ายรถล่าสุด
               </CardTitle>
               <Link href="/car-service">
-                <Button variant="ghost" size="sm" className="text-xs h-7">
-                  ดูทั้งหมด
-                </Button>
+                <Button variant="ghost" size="sm" className="text-xs h-7">ดูทั้งหมด</Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <ul className="divide-y">
               {vehicleCarExpenses.slice(0, 5).map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between py-2 text-sm"
-                >
+                <li key={e.id} className="flex items-center justify-between py-2 text-sm">
                   <div>
                     <p>{e.description}</p>
                     <p className="text-xs text-muted-foreground">{e.date}</p>
@@ -265,19 +442,14 @@ export default function VehicleDetailPage({
                 ค่าเดินทางล่าสุด
               </CardTitle>
               <Link href="/car-service">
-                <Button variant="ghost" size="sm" className="text-xs h-7">
-                  ดูทั้งหมด
-                </Button>
+                <Button variant="ghost" size="sm" className="text-xs h-7">ดูทั้งหมด</Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <ul className="divide-y">
               {vehicleTravelExpenses.slice(0, 5).map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between py-2 text-sm"
-                >
+                <li key={e.id} className="flex items-center justify-between py-2 text-sm">
                   <div>
                     <p>{e.description}</p>
                     <p className="text-xs text-muted-foreground">
@@ -291,6 +463,15 @@ export default function VehicleDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Edit dialog */}
+      <EditVehicleDialog
+        vehicle={vehicle}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSave={updateVehicle}
+        isSaving={isUpdating}
+      />
     </main>
   );
 }
