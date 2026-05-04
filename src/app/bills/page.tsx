@@ -3,14 +3,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/back-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BillForm } from "@/components/bills/BillForm";
 import { BillCard } from "@/components/bills/BillCard";
 import { useBills } from "@/hooks/useBills";
-import { Receipt, TrendingDown, AlertCircle, CalendarClock } from "lucide-react";
-import type { BillStatus, CreateBillInput } from "@/types/bill";
+import {
+  Receipt,
+  TrendingDown,
+  AlertCircle,
+  CalendarClock,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
+import type { Bill, BillStatus, CreateBillInput } from "@/types/bill";
+
+type SortField = "dueDate" | "paidDate" | "amount";
+type SortDir = "asc" | "desc";
+
+interface MonthGroup {
+  key: string;
+  label: string;
+  monthDate: Date;
+  bills: Bill[];
+}
 
 function formatTHB(amount: number) {
   return amount.toLocaleString("th-TH", {
@@ -51,10 +76,31 @@ const TAB_FILTERS: { value: "all" | BillStatus; label: string }[] = [
   { value: "paid", label: "จ่ายแล้ว" },
 ];
 
+const SORT_LABELS: Record<SortField, string> = {
+  dueDate: "วันครบกำหนด",
+  paidDate: "วันที่จ่าย",
+  amount: "จำนวนเงิน",
+};
+
 export default function BillsPage() {
-  const { bills, isLoading, addBill, markPaid, removeBill, uploadReceipt, removeReceipt, isCreating, isUploading, isUpdating } = useBills();
+  const {
+    bills,
+    isLoading,
+    addBill,
+    updateBill,
+    markPaid,
+    removeBill,
+    uploadReceipt,
+    removeReceipt,
+    isCreating,
+    isUploading,
+    isUpdating,
+  } = useBills();
+
   const [activeTab, setActiveTab] = useState<"all" | BillStatus>("all");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>("dueDate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const today = useMemo(() => {
     const d = new Date();
@@ -118,6 +164,51 @@ export default function BillsPage() {
     const paid = bills.filter((b) => b.status === "paid").length;
     return { all: bills.length, pending, overdue, paid };
   }, [bills]);
+
+  // Group by month, then sort within each group
+  const monthGroups = useMemo<MonthGroup[]>(() => {
+    const groupMap = new Map<string, MonthGroup>();
+
+    filtered.forEach((bill) => {
+      const dateStr =
+        activeTab === "paid" && bill.paidDate ? bill.paidDate : bill.dueDate;
+      const d = new Date(dateStr);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          key,
+          label: d.toLocaleDateString("th-TH", { year: "numeric", month: "long" }),
+          monthDate: new Date(d.getFullYear(), d.getMonth(), 1),
+          bills: [],
+        });
+      }
+      groupMap.get(key)!.bills.push(bill);
+    });
+
+    // Sort bills within each group
+    groupMap.forEach((group) => {
+      group.bills.sort((a, b) => {
+        let diff = 0;
+        if (sortField === "amount") {
+          diff = a.amount - b.amount;
+        } else if (sortField === "paidDate") {
+          const ta = a.paidDate ? new Date(a.paidDate).getTime() : 0;
+          const tb = b.paidDate ? new Date(b.paidDate).getTime() : 0;
+          diff = ta - tb;
+        } else {
+          diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        return sortDir === "asc" ? diff : -diff;
+      });
+    });
+
+    // Sort month groups
+    return Array.from(groupMap.values()).sort((a, b) => {
+      const diff = a.monthDate.getTime() - b.monthDate.getTime();
+      return sortDir === "asc" ? diff : -diff;
+    });
+  }, [filtered, sortField, sortDir, activeTab]);
 
   useEffect(() => {
     if (!isUploading) setUploadingId(null);
@@ -223,6 +314,39 @@ export default function BillsPage() {
           ))}
         </TabsList>
 
+        {/* Sort controls */}
+        <div className="flex items-center gap-2 mt-3">
+          <span className="text-xs text-muted-foreground shrink-0">เรียงตาม:</span>
+          <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+            <SelectTrigger className="h-8 w-auto min-w-[130px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortField[]).map((f) => (
+                <SelectItem key={f} value={f} className="text-xs">
+                  {SORT_LABELS[f]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 shrink-0"
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            title={sortDir === "asc" ? "น้อยไปมาก" : "มากไปน้อย"}
+          >
+            {sortDir === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {sortDir === "asc" ? "น้อยไปมาก" : "มากไปน้อย"}
+          </span>
+        </div>
+
         {TAB_FILTERS.map((t) => (
           <TabsContent key={t.value} value={t.value} className="mt-4">
             {isLoading ? (
@@ -242,18 +366,34 @@ export default function BillsPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filtered.map((bill) => (
-                  <BillCard
-                    key={bill.id}
-                    bill={bill}
-                    onMarkPaid={markPaid}
-                    onRemove={removeBill}
-                    onUploadReceipt={handleUpload}
-                    onRemoveReceipt={removeReceipt}
-                    isUploading={isUploading && uploadingId === bill.id}
-                    isUpdating={isUpdating}
-                  />
+              <div className="space-y-6">
+                {monthGroups.map((group) => (
+                  <div key={group.key}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground">
+                        {group.label}
+                      </h3>
+                      <span className="text-xs text-muted-foreground/70">
+                        ({group.bills.length} รายการ)
+                      </span>
+                      <div className="flex-1 border-t border-border/50" />
+                    </div>
+                    <div className="space-y-3">
+                      {group.bills.map((bill) => (
+                        <BillCard
+                          key={bill.id}
+                          bill={bill}
+                          onMarkPaid={markPaid}
+                          onRemove={removeBill}
+                          onUpdate={updateBill}
+                          onUploadReceipt={handleUpload}
+                          onRemoveReceipt={removeReceipt}
+                          isUploading={isUploading && uploadingId === bill.id}
+                          isUpdating={isUpdating}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

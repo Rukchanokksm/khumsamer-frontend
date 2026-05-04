@@ -14,9 +14,10 @@ import {
   Droplets, Zap, Home, UtensilsCrossed, Car,
   ShoppingCart, Wifi, Smartphone, Shield, Receipt,
   CheckCircle2, Upload, Trash2, ExternalLink, X, Loader2,
-  RefreshCw, Eye, FileText,
+  RefreshCw, Eye, FileText, Pencil,
 } from "lucide-react";
-import type { Bill, BillCategory, BillStatus } from "@/types/bill";
+import type { Bill, BillCategory, BillStatus, UpdateBillInput } from "@/types/bill";
+import { BillEditDialog } from "./BillEditDialog";
 
 const CATEGORY_ICONS: Record<BillCategory, React.ElementType> = {
   water: Droplets,
@@ -88,6 +89,7 @@ interface BillCardProps {
   bill: Bill;
   onMarkPaid: (id: string) => void;
   onRemove: (id: string) => void;
+  onUpdate: (id: string, input: UpdateBillInput) => Promise<Bill>;
   onUploadReceipt: (id: string, file: File) => void;
   onRemoveReceipt: (id: string) => void;
   isUploading?: boolean;
@@ -98,6 +100,7 @@ export function BillCard({
   bill,
   onMarkPaid,
   onRemove,
+  onUpdate,
   onUploadReceipt,
   onRemoveReceipt,
   isUploading,
@@ -105,6 +108,7 @@ export function BillCard({
 }: BillCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const Icon = CATEGORY_ICONS[bill.category];
 
   const isPdf =
@@ -195,6 +199,16 @@ export function BillCard({
               </Button>
             )}
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-3 w-3" />
+              แก้ไข
+            </Button>
+
             {/* Hidden file input — shared for both upload and replace */}
             <input
               ref={fileInputRef}
@@ -267,6 +281,13 @@ export function BillCard({
           </div>
         </CardContent>
       </Card>
+
+      <BillEditDialog
+        bill={bill}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onUpdate={onUpdate}
+      />
 
       {/* Receipt preview dialog */}
       {bill.receiptUrl && (

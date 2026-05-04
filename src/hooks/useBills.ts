@@ -66,7 +66,7 @@ export function useBills() {
     isError: query.isError,
     addBill: (input: CreateBillInput) => createMutation.mutateAsync(input),
     updateBill: (id: string, input: UpdateBillInput) =>
-      updateMutation.mutate({ id, ...input }),
+      updateMutation.mutateAsync({ id, ...input }),
     markPaid: (id: string) =>
       updateMutation.mutate({ id, status: "paid" }),
     removeBill: (id: string) => deleteMutation.mutate(id),
